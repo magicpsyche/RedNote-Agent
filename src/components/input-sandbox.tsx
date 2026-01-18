@@ -189,9 +189,6 @@ export function InputSandbox() {
         <div>
           <p className="text-xs font-semibold text-primary">Input Sandbox</p>
           <h2 className="text-lg font-semibold leading-tight">输入区</h2>
-          <p className="text-sm text-muted-foreground">
-            将表单或 JSON 写入 Zustand，触发 Server Action 流水线。当前按钮会填充示例数据。
-          </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="rounded-full bg-muted px-3 py-1">
@@ -237,10 +234,6 @@ export function InputSandbox() {
                 }}
               />
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              编辑 JSON 后提交；缺字段会自动抛出校验错误（tone 可选：温馨治愈 / 活泼俏皮 /
-              专业测评 / 种草安利 / 简约高级）。
-            </p>
             {jsonError && (
               <p className="mt-2 text-xs font-semibold text-destructive">{jsonError}</p>
             )}
@@ -323,9 +316,6 @@ export function InputSandbox() {
         >
           重置
         </button>
-        <span className="text-xs text-muted-foreground">
-          已接入 Server Action：文案 → 视觉策略 → Seedream 生图 → 排版 JSON。
-        </span>
         {activeTab === "json" && (
           <button
             type="button"
