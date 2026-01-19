@@ -2,6 +2,8 @@
 
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type {
   CopyResult,
@@ -463,7 +465,7 @@ async function loadPromptFromFile(filename: string): Promise<string | null> {
   if (filename === "prompt2.md" && prompt2Cache) return prompt2Cache;
   try {
     const filePath = path.resolve(process.cwd(), filename);
-    const content = await fs.readFile(filePath, "utf-8");
+    const content = await readFile(filePath, "utf-8");
     if (filename === "prompt2.md") prompt2Cache = content;
     return content;
   } catch (error) {
