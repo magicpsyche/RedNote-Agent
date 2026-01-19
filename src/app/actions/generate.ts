@@ -6,6 +6,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { toProxyImageUrl } from "@/lib/image-proxy";
 import type {
   CopyResult,
   LayoutConfig,
@@ -34,64 +35,66 @@ const copyResultSchema = z.object({
   selling_keywords: z.array(z.string()).min(1),
 });
 
-const visualStrategySchema: z.ZodType<VisualStrategy> = z.object({
-  seedream_prompt_cn: z.string(),
-  design_plan: z.object({
-    canvas: z.object({
-      width: z.number(),
-      height: z.number(),
-    }),
-    tone: z.string(),
-    background_color_hex: z.string(),
-    color_palette: z.object({
-      primary: z.string(),
-      secondary: z.string(),
-      accent: z.string(),
-    }),
-    layout_elements: z.array(
-      z.object({
-        type: z.literal("text"),
-        content: z.string(),
-        is_main_title: z.boolean(),
-        style_config: z.object({
-          font_family: z.string(),
-          font_size: z.number(),
-          font_weight: z.union([z.literal("normal"), z.literal("bold"), z.literal("900")]),
-          color: z.string(),
-          opacity: z.number().optional(),
-          position: z.object({
-            top: z.string(),
-            left: z.string(),
-            align: z.union([z.literal("left"), z.literal("center"), z.literal("right")]),
-          }),
-          effect: z.union([
-            z.literal("none"),
-            z.literal("shadow"),
-            z.literal("stroke"),
-            z.literal("background_highlight"),
-          ]),
-        }),
-      })
-    ),
-    decorations: z.array(
-      z.object({
-        type: z.literal("svg_icon"),
-        shape: z.union([
-          z.literal("star"),
-          z.literal("sparkle"),
-          z.literal("wave"),
-          z.literal("underline"),
-          z.literal("circle"),
-        ]),
+const designPlanSchema: z.ZodType<VisualStrategy["design_plan"]> = z.object({
+  canvas: z.object({
+    width: z.number(),
+    height: z.number(),
+  }),
+  tone: z.string(),
+  background_color_hex: z.string(),
+  color_palette: z.object({
+    primary: z.string(),
+    secondary: z.string(),
+    accent: z.string(),
+  }),
+  layout_elements: z.array(
+    z.object({
+      type: z.literal("text"),
+      content: z.string(),
+      is_main_title: z.boolean(),
+      style_config: z.object({
+        font_family: z.string(),
+        font_size: z.number(),
+        font_weight: z.union([z.literal("normal"), z.literal("bold"), z.literal("900")]),
         color: z.string(),
+        opacity: z.number().optional(),
         position: z.object({
           top: z.string(),
           left: z.string(),
+          align: z.union([z.literal("left"), z.literal("center"), z.literal("right")]),
         }),
-        size: z.number(),
-      })
-    ),
-  }),
+        effect: z.union([
+          z.literal("none"),
+          z.literal("shadow"),
+          z.literal("stroke"),
+          z.literal("background_highlight"),
+        ]),
+      }),
+    })
+  ),
+  decorations: z.array(
+    z.object({
+      type: z.literal("svg_icon"),
+      shape: z.union([
+        z.literal("star"),
+        z.literal("sparkle"),
+        z.literal("wave"),
+        z.literal("underline"),
+        z.literal("circle"),
+      ]),
+      color: z.string(),
+      position: z.object({
+        top: z.string(),
+        left: z.string(),
+      }),
+      size: z.number(),
+    })
+  ),
+});
+
+const visualStrategySchema: z.ZodType<VisualStrategy> = z.object({
+  seedream_prompt_cn: z.string(),
+  design_plan: designPlanSchema,
 });
 
 const layoutSchema: z.ZodType<LayoutConfig> = z.object({
@@ -120,37 +123,18 @@ export async function generateAll(rawInput: ProductInput): Promise<GenerateAllRe
   const llmConfig = getLLMConfig();
   const imageConfig = getImageConfig();
 
-  console.log("[generateAll] start", {
-    product_id: input.product_id,
-    llmBase: llmConfig.baseUrl,
-    llmModel: llmConfig.model,
-    llmKeyPresent: Boolean(llmConfig.apiKey),
-    imageBase: imageConfig.baseUrl,
-    imageModel: imageConfig.model,
-    imageKeyPresent: Boolean(imageConfig.apiKey),
-  });
-
   const copy = await generateCopy(input, llmConfig);
-  console.log("[generateAll] copy done", { title: copy.title });
   const visual = await generateVisualStrategy(copy, llmConfig);
-  console.log("[generateAll] visual done", {
-    promptPreview: visual.seedream_prompt_cn.slice(0, 40),
-  });
   const backgroundImage = await generateSeedreamImage(
     visual.seedream_prompt_cn,
     imageConfig
   );
-  console.log("[generateAll] image done", {
-    backgroundImage: backgroundImage.slice(0, 80),
-  });
+  const proxiedBackgroundImage = toProxyImageUrl(backgroundImage);
   const layout = await generateLayoutConfig({
     copy,
     visual,
-    backgroundImage,
+    backgroundImage: proxiedBackgroundImage,
     llmConfig,
-  });
-  console.log("[generateAll] layout done", {
-    layers: layout.layers.length,
   });
 
   return { copy, visual, layout };
@@ -169,7 +153,8 @@ export async function generateVisualStrategyAction(
 }
 
 export async function generateSeedreamImageAction(prompt: string): Promise<string> {
-  return generateSeedreamImage(prompt, getImageConfig());
+  const url = await generateSeedreamImage(prompt, getImageConfig());
+  return toProxyImageUrl(url);
 }
 
 export async function generateLayoutConfigAction(params: {
@@ -194,25 +179,24 @@ async function generateCopy(
   const userPrompt = fillTemplate(promptPair.user, {
     Product_JSON: JSON.stringify(input),
   });
+//   console.info("[USER_PROMPT][文案]", userPrompt);
 
   try {
-    const { content, raw } = await callChatCompletion({
+    const { content } = await callChatCompletion({
       systemPrompt,
       userPrompt,
       temperature: 0.8,
       llmConfig,
     });
-    console.log("[generateCopy] raw llm content:", content);
-    console.log("[generateCopy] raw llm response object:", raw);
 
     const primaryParsed = tryParseJson(content);
     const parsed = copyResultSchema.safeParse(primaryParsed);
     if (parsed.success) return parsed.data;
-    console.warn("[generateCopy] parse failed, content preview:", content.slice(0, 200));
     throw new Error("LLM copyResult parse failed");
   } catch (error) {
-    console.error("[generateCopy] 使用 LLM 失败", error);
-    throw error;
+    throw error instanceof Error
+      ? error
+      : new Error("generateCopy 调用 LLM 失败");
   }
 }
 
@@ -230,6 +214,7 @@ async function generateVisualStrategy(
   const userPrompt = fillTemplate(promptPair.user, {
     copyResult: JSON.stringify(copy),
   });
+//   console.info("[USER_PROMPT][视觉策略]", userPrompt);
 
   try {
     const { content } = await callChatCompletion({
@@ -238,16 +223,17 @@ async function generateVisualStrategy(
       temperature: 0.7,
       llmConfig,
     });
+    console.info("[LLM_RESPONSE][视觉策略]", content);
     const jsonCandidate = tryParseJson(content);
     const transformed =
       (jsonCandidate && transformVisualResponse(JSON.stringify(jsonCandidate), copy.tone)) ||
       transformVisualResponse(content, copy.tone);
     if (transformed) return transformed;
-    console.warn("[generateVisualStrategy] transform failed, content preview:", content.slice(0, 200));
     throw new Error("LLM visualStrategy parse failed");
   } catch (error) {
-    console.error("[generateVisualStrategy] 使用 LLM 失败", error);
-    throw error;
+    throw error instanceof Error
+      ? error
+      : new Error("generateVisualStrategy 调用 LLM 失败");
   }
 }
 
@@ -273,6 +259,7 @@ function transformVisualResponse(content: string, tone: string): VisualStrategy 
       }>;
       tone_color_palette?: Record<string, string>;
       font_system?: Record<string, string>;
+      design_plan?: unknown;
     };
 
     const seedreamPrompt = raw.seedream_prompt_cn || raw.seedream_prompt;
@@ -282,14 +269,26 @@ function transformVisualResponse(content: string, tone: string): VisualStrategy 
     const fontHeading = raw.font_system?.heading_font || "ZCOOL KuaiLe";
     const fontBody = raw.font_system?.body_font || "ZCOOL KuaiLe";
 
+    const paletteFallback = {
+      primary: palette.primary_bg || palette.primary_color || "#f59e0b",
+      secondary: palette.secondary_accent || palette.secondary_color || "#f1f5f9",
+      accent: palette.highlight_accent || palette.accent_color || "#111827",
+    };
+
+    const designPlanFromLLM = normalizeDesignPlan(raw.design_plan, tone, {
+      palette: paletteFallback,
+      fontHeading,
+      fontBody,
+    });
+
     const design_plan: VisualStrategy["design_plan"] = {
       canvas: { width: 1080, height: 1440 },
       tone,
       background_color_hex: palette.primary_bg || palette.primary_color || "#f7f4ef",
       color_palette: {
-        primary: palette.primary_bg || palette.primary_color || "#f59e0b",
-        secondary: palette.secondary_accent || palette.secondary_color || "#f1f5f9",
-        accent: palette.highlight_accent || palette.accent_color || "#111827",
+        primary: paletteFallback.primary,
+        secondary: paletteFallback.secondary,
+        accent: paletteFallback.accent,
       },
       layout_elements: [],
       decorations: [],
@@ -336,16 +335,167 @@ function transformVisualResponse(content: string, tone: string): VisualStrategy 
 
     const candidate: VisualStrategy = {
       seedream_prompt_cn: seedreamPrompt,
-      design_plan,
+      design_plan: designPlanFromLLM || design_plan,
     };
 
     const parsed = visualStrategySchema.safeParse(candidate);
     if (parsed.success) return parsed.data;
-  } catch (error) {
-    console.error("[transformVisualResponse] parse failed", error);
+  } catch {
     return null;
   }
 
+  return null;
+}
+
+function normalizeDesignPlan(
+  rawPlan: unknown,
+  tone: string,
+  context: {
+    palette: { primary: string; secondary: string; accent: string };
+    fontHeading: string;
+    fontBody: string;
+  }
+): VisualStrategy["design_plan"] | null {
+  if (!rawPlan) return null;
+
+  let resolvedPlan: unknown = rawPlan;
+  if (typeof rawPlan === "string") {
+    try {
+      resolvedPlan = JSON.parse(rawPlan);
+    } catch (error) {
+      console.warn("[normalizeDesignPlan] design_plan JSON 解析失败", error);
+      return null;
+    }
+  }
+
+  if (!resolvedPlan || typeof resolvedPlan !== "object") return null;
+
+  const planObj = resolvedPlan as Record<string, unknown>;
+  const layoutElements = Array.isArray(planObj.layout_elements) ? planObj.layout_elements : [];
+  const decorations = Array.isArray(planObj.decorations) ? planObj.decorations : [];
+
+  const toPosString = (value: unknown, fallback: string) => {
+    if (typeof value === "number") return `${value}%`;
+    if (typeof value === "string" && value.trim()) return value;
+    return fallback;
+  };
+
+  const normalizedElements = layoutElements
+    .filter((item) => item && item.type === "text" && item.content)
+    .map((item, idx) => {
+      const isMain = Boolean(item.is_main_title) || item.id === "title_section" || idx === 0;
+      const style = item.style_config || item.style || {};
+      const position = style.position || item.position || {};
+      const fontFamily =
+        style.font_family ||
+        (isMain ? context.fontHeading : context.fontBody) ||
+        (tone === "活泼俏皮" ? "ZCOOL QingKe HuangYou" : "ZCOOL KuaiLe");
+
+      const fontSizeRaw = style.font_size ?? (isMain ? "52px" : "32px");
+      const fontSizeNum =
+        typeof fontSizeRaw === "number"
+          ? fontSizeRaw
+          : parseInt(String(fontSizeRaw).replace(/[^\d]/g, ""), 10) || (isMain ? 52 : 32);
+
+      const alignRaw = position.align || style.align || style.text_align;
+      const align: "left" | "center" | "right" =
+        alignRaw === "right" ? "right" : alignRaw === "center" ? "center" : "left";
+
+      const effectRaw = style.effect;
+      const effect: VisualStrategy["design_plan"]["layout_elements"][number]["style_config"]["effect"] =
+        effectRaw === "none" ||
+        effectRaw === "shadow" ||
+        effectRaw === "stroke" ||
+        effectRaw === "background_highlight"
+          ? effectRaw
+          : "shadow";
+
+      return {
+        type: "text" as const,
+        content: String(item.content ?? ""),
+        is_main_title: isMain,
+        style_config: {
+          font_family: fontFamily,
+          font_size: fontSizeNum,
+          font_weight:
+            (style.font_weight as "normal" | "bold" | "900") || (isMain ? "900" : "bold"),
+          color: style.color || "#111827",
+          opacity: style.opacity ? Number(style.opacity) : 0.9,
+          position: {
+            top: toPosString(position.top, `${8 + idx * 12}%`),
+            left: toPosString(position.left, "8%"),
+            align,
+          },
+          effect,
+        },
+      };
+    });
+
+  const normalizedDecorations = decorations
+    .filter((item) => item && item.type === "svg_icon")
+    .map((item) => {
+      const shape =
+        item.shape === "sparkle" ||
+        item.shape === "wave" ||
+        item.shape === "underline" ||
+        item.shape === "circle"
+          ? item.shape
+          : "star";
+      const sizeRaw = item.size ?? 24;
+      const size = typeof sizeRaw === "number" ? sizeRaw : parseInt(String(sizeRaw), 10) || 24;
+      const position = item.position || {};
+
+      return {
+        type: "svg_icon" as const,
+        shape,
+        color: item.color || context.palette.accent,
+        position: {
+          top: toPosString(position.top, "10%"),
+          left: toPosString(position.left, "10%"),
+        },
+        size,
+      };
+    });
+
+  const canvasRaw =
+    typeof planObj.canvas === "object" && planObj.canvas !== null
+      ? (planObj.canvas as Record<string, unknown>)
+      : {};
+  const colorPaletteRaw =
+    typeof planObj.color_palette === "object" && planObj.color_palette !== null
+      ? (planObj.color_palette as Record<string, unknown>)
+      : {};
+  const toneValue = typeof planObj.tone === "string" && planObj.tone ? planObj.tone : tone;
+  const backgroundColor =
+    (typeof planObj.background_color_hex === "string" && planObj.background_color_hex) ||
+    context.palette.primary ||
+    "#f7f4ef";
+
+  const candidate = {
+    canvas: {
+      width: Number(canvasRaw.width) || 1080,
+      height: Number(canvasRaw.height) || 1440,
+    },
+    tone: toneValue,
+    background_color_hex: backgroundColor,
+    color_palette: {
+      primary:
+        (typeof colorPaletteRaw.primary === "string" && colorPaletteRaw.primary) ||
+        context.palette.primary,
+      secondary:
+        (typeof colorPaletteRaw.secondary === "string" && colorPaletteRaw.secondary) ||
+        context.palette.secondary,
+      accent:
+        (typeof colorPaletteRaw.accent === "string" && colorPaletteRaw.accent) ||
+        context.palette.accent,
+    },
+    layout_elements: normalizedElements,
+    decorations: normalizedDecorations,
+  };
+
+  const parsed = designPlanSchema.safeParse(candidate);
+  if (parsed.success) return parsed.data;
+  console.warn("[normalizeDesignPlan] design_plan 验证失败", parsed.error?.message);
   return null;
 }
 
@@ -356,6 +506,8 @@ async function generateSeedreamImage(
   if (!imageConfig.apiKey) {
     throw new Error("[generateSeedreamImage] missing image api key");
   }
+
+  console.info("[USER_PROMPT][生图]", prompt);
 
   const endpoint =
     imageConfig.baseUrl?.includes("/images/generations")
@@ -390,8 +542,9 @@ async function generateSeedreamImage(
     const url = data.data?.[0]?.url;
     if (url) return url;
   } catch (error) {
-    console.error("[generateSeedreamImage] 生成失败", error);
-    throw error;
+    throw error instanceof Error
+      ? error
+      : new Error("generateSeedreamImage 调用失败");
   }
 }
 
@@ -413,6 +566,7 @@ async function generateLayoutConfig(params: {
     "Background Image": params.backgroundImage,
     Copy: JSON.stringify({ title: params.copy.title, tags: params.copy.tags }),
   });
+  console.info("[USER_PROMPT][排版]", userPrompt);
 
   try {
     const { content } = await callChatCompletion({
@@ -428,16 +582,16 @@ async function generateLayoutConfig(params: {
         ...parsed.data,
         canvas: {
           ...parsed.data.canvas,
-          backgroundImage: params.backgroundImage,
+          backgroundImage: toProxyImageUrl(params.backgroundImage),
           tone: params.visual.design_plan.tone,
         },
       };
     }
-    console.warn("[generateLayoutConfig] parse failed, content preview:", content.slice(0, 200));
     throw new Error("LLM layout parse failed");
   } catch (error) {
-    console.error("[generateLayoutConfig] 使用 LLM 失败", error);
-    throw error;
+    throw error instanceof Error
+      ? error
+      : new Error("generateLayoutConfig 调用 LLM 失败");
   }
 }
 
@@ -468,27 +622,13 @@ async function callChatCompletion({
     { role: "user" as const, content: userPrompt },
   ];
 
-  // 调试用：打印请求设置与完整 payload（不含 key）
-  const payload = {
-    baseURL: llmConfig.baseUrl,
-    model: llmConfig.model,
-    temperature,
-    messages,
-  };
-  console.log("[callChatCompletion] systemPrompt length:", systemPrompt.length);
-  console.log("[callChatCompletion] userPrompt length:", userPrompt.length);
-  console.log("[callChatCompletion] systemPrompt head:", systemPrompt.slice(0, 120));
-  console.log("[callChatCompletion] systemPrompt tail:", systemPrompt.slice(-200));
-  console.log("[callChatCompletion] payload (pretty):", JSON.stringify(payload, null, 2));
+//   console.info("[USER_PROMPT——▲▲▲▲▲]", userPrompt);
 
   const result = await generateText({
     model,
     messages,
     temperature,
   });
-
-  console.log("[callChatCompletion] usage:", result.usage);
-  console.log("[callChatCompletion] responseMessages:", result.responseMessages);
 
   const content = result.text;
   if (!content) {
@@ -512,8 +652,7 @@ async function loadPromptFromFile(filename: string): Promise<string | null> {
     const filePath = path.resolve(process.cwd(), filename);
     const content = await readFile(filePath, "utf-8");
     return content;
-  } catch (error) {
-    console.warn(`[loadPromptFromFile] 读取失败: ${filename}`, error);
+  } catch {
     return null;
   }
 }
@@ -566,7 +705,6 @@ function tryParseJson(content: string | undefined | null): unknown | null {
   try {
     return JSON.parse(trimmed);
   } catch {
-    console.warn("[tryParseJson] parse failed, preview:", trimmed.slice(0, 200));
     return null;
   }
 }

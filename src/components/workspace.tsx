@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import Draggable from "react-draggable";
 import { toPng } from "html-to-image";
 
@@ -8,7 +9,7 @@ import { useAppStore } from "@/store/use-app-store";
 import type { LayoutConfig, TextLayer } from "@/types/schema";
 
 const PLACEHOLDER_BG =
-  "https://placehold.co/2304x3072/png?text=Seedream+2304x3072";
+  "https://placehold.co/2304x3072/png?text=%E7%AD%89%E5%BE%85%E5%B0%81%E9%9D%A2%E7%94%9F%E6%88%90";
 
 export function Workspace() {
   const { copyResult, layoutConfig, status } = useAppStore();
@@ -71,6 +72,16 @@ function normalizeStyle(style: TextLayer["style"]): TextLayer["style"] {
 
 function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[] }) {
   const { copyResult } = useAppStore();
+  const [copied, setCopied] = useState(false);
+  const copyResetRef = useRef<number>();
+
+  useEffect(() => {
+    return () => {
+      if (copyResetRef.current) {
+        clearTimeout(copyResetRef.current);
+      }
+    };
+  }, []);
 
   const handleCopy = async () => {
     const text = copyResult?.content;
@@ -78,16 +89,19 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
-        return;
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
       }
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
+      setCopied(true);
+      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      copyResetRef.current = window.setTimeout(() => setCopied(false), 1400);
     } catch (error) {
       console.error("Copy failed", error);
     }
@@ -100,7 +114,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
           <p className="text-sm font-medium">文案预览</p>
         </div>
         <span className="rounded-full bg-secondary px-3 py-1 text-[11px] text-secondary-foreground">
-          Tone: {copyResult?.tone ?? "未选择"}
+          {copyResult?.product_id ?? "未生成"}
         </span>
       </div>
       <div className="mt-3 space-y-3">
@@ -113,9 +127,24 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
               type="button"
               disabled={!copyPresent}
               onClick={() => void handleCopy()}
-              className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted/60 disabled:opacity-50"
+              className={`group relative overflow-hidden rounded-full border border-border px-3 py-1 text-xs font-semibold transition-all duration-200 ${
+                copied
+                  ? "bg-gradient-to-r from-emerald-500/80 to-teal-500/70 text-white shadow-[0_8px_30px_rgba(16,185,129,0.25)]"
+                  : "text-foreground hover:bg-muted/60"
+              } disabled:opacity-50`}
             >
-              复制正文
+              <span
+                className={`absolute inset-0 scale-150 bg-white/20 blur-2xl transition-opacity duration-300 ${
+                  copied ? "opacity-80" : "opacity-0"
+                }`}
+                aria-hidden
+              />
+              <span
+                className={`relative flex items-center gap-1 ${copied ? "animate-[pulse_0.9s_ease-out]" : ""}`}
+              >
+                <span className="h-2 w-2 rounded-full bg-current opacity-80 transition-transform duration-200 group-hover:scale-110" />
+                {copied ? "已复制" : "复制正文"}
+              </span>
             </button>
           </div>
           {copyResult?.content && (
@@ -140,19 +169,27 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
 }
 
 function CanvasPreview() {
-  const { layoutConfig, visualStrategy, setLayoutConfig, copyResult } = useAppStore();
+  const {
+    layoutConfig,
+    visualStrategy,
+    backgroundImagePreview,
+    setLayoutConfig,
+    copyResult,
+  } = useAppStore();
   const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasShellRef = useRef<HTMLDivElement>(null);
+  const previewShellRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const dragRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
-  const bgUrl = layoutConfig?.canvas?.backgroundImage ?? PLACEHOLDER_BG;
+  const bgUrl = layoutConfig?.canvas?.backgroundImage ?? backgroundImagePreview ?? PLACEHOLDER_BG;
   const overlayOpacity = layoutConfig?.canvas?.overlayOpacity ?? 0;
-  const logicalSize =
-    layoutConfig?.canvas?.width && layoutConfig?.canvas?.height
-      ? `${layoutConfig.canvas.width}×${layoutConfig.canvas.height}`
-      : "1080×1440";
+  const logicalWidth = layoutConfig?.canvas?.width ?? 1080;
+  const logicalHeight = layoutConfig?.canvas?.height ?? 1440;
 
   const layers = useMemo(() => layoutConfig?.layers ?? [], [layoutConfig]);
   const normalizedLayers = useMemo(
@@ -174,9 +211,9 @@ function CanvasPreview() {
   };
 
   const handleDrag = (id: string, data: { x: number; y: number }) => {
-    if (!layoutConfig || !canvasSize.width || !canvasSize.height) return;
-    const topPercent = (data.y / canvasSize.height) * 100;
-    const leftPercent = (data.x / canvasSize.width) * 100;
+    if (!layoutConfig || !logicalWidth || !logicalHeight) return;
+    const topPercent = (data.y / logicalHeight) * 100;
+    const leftPercent = (data.x / logicalWidth) * 100;
 
     const updated: LayoutConfig = {
       ...layoutConfig,
@@ -194,28 +231,48 @@ function CanvasPreview() {
   };
 
   const layerPositions = useMemo(() => {
-    if (!canvasSize.width || !canvasSize.height) return {};
+    if (!logicalWidth || !logicalHeight) return {};
     return Object.fromEntries(
       layers.map((layer) => {
         const style = normalizeStyle(layer.style);
-        const top = parseFloat(String(style.top ?? "0"));
-        const left = parseFloat(String(style.left ?? "0"));
-        const isPercent =
-          String(style.top ?? "").includes("%") ||
-          String(style.left ?? "").includes("%");
-        if (isPercent) {
-          return [
-            layer.id,
-            {
-              x: (left / 100) * canvasSize.width,
-              y: (top / 100) * canvasSize.height,
-            },
-          ];
-        }
-        return [layer.id, { x: left, y: top }];
+        const hasLeft = style.left !== undefined && style.left !== null;
+        const hasTop = style.top !== undefined && style.top !== null;
+        const hasRight = style.right !== undefined && style.right !== null;
+        const hasBottom = style.bottom !== undefined && style.bottom !== null;
+
+        const leftRaw = parseFloat(String(style.left ?? "0"));
+        const topRaw = parseFloat(String(style.top ?? "0"));
+        const rightRaw = parseFloat(String(style.right ?? "0"));
+        const bottomRaw = parseFloat(String(style.bottom ?? "0"));
+
+        const topIsPercent = typeof style.top === "string" && String(style.top).includes("%");
+        const leftIsPercent = typeof style.left === "string" && String(style.left).includes("%");
+        const rightIsPercent = typeof style.right === "string" && String(style.right).includes("%");
+        const bottomIsPercent = typeof style.bottom === "string" && String(style.bottom).includes("%");
+
+        const x = hasLeft
+          ? leftIsPercent
+            ? (leftRaw / 100) * logicalWidth
+            : leftRaw
+          : hasRight
+            ? rightIsPercent
+              ? logicalWidth - (rightRaw / 100) * logicalWidth
+              : logicalWidth - rightRaw
+            : 0;
+
+        const y = hasTop
+          ? topIsPercent
+            ? (topRaw / 100) * logicalHeight
+            : topRaw
+          : hasBottom
+            ? bottomIsPercent
+              ? logicalHeight - (bottomRaw / 100) * logicalHeight
+              : logicalHeight - bottomRaw
+            : 0;
+        return [layer.id, { x, y }];
       })
     );
-  }, [layers, canvasSize]);
+  }, [layers, logicalWidth, logicalHeight]);
 
   const adjustZIndex = (id: string, delta: number) => {
     if (!layoutConfig) return;
@@ -240,57 +297,57 @@ function CanvasPreview() {
   };
 
   const exportImage = async () => {
-    if (!canvasRef.current || !layoutConfig) return;
+    if (!exportRef.current || !layoutConfig) return;
     setIsExporting(true);
-    try {
-      const node = canvasRef.current;
-      const cleanup: Array<() => void> = [];
-      const prevInline = {
-        width: node.style.width,
-        height: node.style.height,
-        maxWidth: node.style.maxWidth,
-      };
 
-      node.style.width = "1080px";
-      node.style.height = "1440px";
-      node.style.maxWidth = "unset";
+    const cleanup: Array<() => void> = [];
+    const node = exportRef.current;
+    const exportWidth = logicalWidth || 1080;
+    const exportHeight = logicalHeight || 1440;
+
+    try {
+      node.style.width = `${exportWidth}px`;
+      node.style.height = `${exportHeight}px`;
+      node.style.transform = "scale(1)";
+      node.style.transformOrigin = "top left";
 
       const restoreBg = await inlineBackground(node, bgUrl);
       if (restoreBg) cleanup.push(restoreBg);
 
+      if (document.fonts?.ready) {
+        await document.fonts.ready.catch(() => undefined);
+      }
+
       const dataUrl = await toPng(node, {
-        width: 1080,
-        height: 1440,
+        width: exportWidth,
+        height: exportHeight,
         pixelRatio: 1,
         cacheBust: true,
+        // 避免 html-to-image 内联跨域字体报错（codicon / vscode 样式表）
         skipFonts: true,
+        backgroundColor: "#ffffff",
         style: {
-          width: "1080px",
-          height: "1440px",
-          maxWidth: "unset",
+          width: `${exportWidth}px`,
+          height: `${exportHeight}px`,
         },
       });
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = "rednote-cover.png";
+      link.download = copyResult?.product_id ? `${copyResult.product_id}_cover.png` : "cover.png";
       link.click();
     } catch (error) {
       console.error("Export failed", error);
     } finally {
-      if (canvasRef.current) {
-        canvasRef.current.style.width = prevInline.width;
-        canvasRef.current.style.height = prevInline.height;
-        canvasRef.current.style.maxWidth = prevInline.maxWidth;
-      }
       cleanup.forEach((fn) => fn());
       setIsExporting(false);
     }
   };
 
   const inlineBackground = async (node: HTMLDivElement, imageUrl: string) => {
-    if (!imageUrl) return null;
+    if (!imageUrl || imageUrl.startsWith("data:")) return null;
     try {
-      const res = await fetch(imageUrl);
+      const res = await fetch(imageUrl, { mode: "cors" });
+      if (!res.ok) throw new Error(`bg fetch failed: ${res.status}`);
       const blob = await res.blob();
       const reader = new FileReader();
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -309,25 +366,70 @@ function CanvasPreview() {
         node.style.backgroundImage = prev;
       };
     } catch (error) {
-      console.error("Failed to inline background", error);
+      console.warn("背景图内联失败，继续导出（可能缺少底图）", error);
       return null;
     }
   };
 
-  const previewRatio = 3 / 4;
+  const previewRatio = logicalWidth && logicalHeight ? logicalWidth / logicalHeight : 3 / 4;
+  const canvasScale = useMemo(() => {
+    if (!canvasSize.width || !canvasSize.height) return 1;
+    if (!logicalWidth || !logicalHeight) return 1;
+    const scale = Math.min(canvasSize.width / logicalWidth, canvasSize.height / logicalHeight);
+    return Math.min(scale || 1, 1);
+  }, [canvasSize.height, canvasSize.width, logicalHeight, logicalWidth]);
+
+  const pickBoxStyle = useMemo(
+    () => (style: TextLayer["style"]) => {
+      const keys: Array<keyof CSSProperties> = [
+        "width",
+        "minWidth",
+        "maxWidth",
+        "height",
+        "minHeight",
+        "maxHeight",
+        "transform",
+        "transformOrigin",
+      ];
+      const entries = Object.entries(style as Record<string, unknown>).filter(([key]) =>
+        keys.includes(key as keyof CSSProperties)
+      );
+      return Object.fromEntries(entries) as CSSProperties;
+    },
+    []
+  );
+  const previewScale = useMemo(() => {
+    if (!previewSize.width || !previewSize.height) return 1;
+    if (!logicalWidth || !logicalHeight) return 1;
+    const scale = Math.min(previewSize.width / logicalWidth, previewSize.height / logicalHeight);
+    return Math.min(scale || 1, 1);
+  }, [logicalHeight, logicalWidth, previewSize.height, previewSize.width]);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasShellRef.current) return;
     const updateSize = () => {
-      const rect = canvasRef.current?.getBoundingClientRect();
+      const rect = canvasShellRef.current?.getBoundingClientRect();
       if (!rect) return;
       setCanvasSize({ width: rect.width, height: rect.height });
     };
     updateSize();
     const observer = new ResizeObserver(updateSize);
-    observer.observe(canvasRef.current);
+    observer.observe(canvasShellRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [logicalWidth, logicalHeight]);
+
+  useEffect(() => {
+    if (!previewShellRef.current) return;
+    const updatePreviewSize = () => {
+      const rect = previewShellRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPreviewSize({ width: rect.width, height: rect.height });
+    };
+    updatePreviewSize();
+    const observer = new ResizeObserver(updatePreviewSize);
+    observer.observe(previewShellRef.current);
+    return () => observer.disconnect();
+  }, [isPreviewOpen, logicalWidth, logicalHeight]);
 
   const getNodeRef = (id: string) => {
     if (!dragRefs.current[id]) {
@@ -364,16 +466,121 @@ function CanvasPreview() {
 
       <div className="relative isolate w-full overflow-hidden rounded-xl border border-border bg-gradient-to-b from-muted/40 to-background shadow-md">
         <div
-          ref={canvasRef}
+          ref={canvasShellRef}
           className="relative mx-auto"
+          style={{ aspectRatio: `${logicalWidth} / ${logicalHeight}`, width: "100%" }}
+        >
+          <div className="absolute inset-0">
+            <div
+              ref={canvasRef}
+              className="relative"
+              style={{
+                width: `${logicalWidth}px`,
+                height: `${logicalHeight}px`,
+                transform: `scale(${canvasScale})`,
+                transformOrigin: "top left",
+                backgroundImage: `url(${bgUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              {overlayOpacity > 0 && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    opacity: overlayOpacity,
+                  }}
+                />
+              )}
+              <div className="absolute inset-0">
+                {normalizedLayers.map((layer) =>
+                  layer.type === "text" ? (
+                    (() => {
+                      const nodeRef = getNodeRef(layer.id);
+                    const position =
+                      layerPositions[layer.id] ?? {
+                        x: parseFloat(String(layer.style.left ?? "0")) || 0,
+                        y: parseFloat(String(layer.style.top ?? "0")) || 0,
+                      };
+                    const boxStyle = pickBoxStyle(layer.style);
+                    return (
+                      <Draggable
+                        key={`${layer.id}-${logicalWidth}-${logicalHeight}-${position.x}-${position.y}`}
+                        nodeRef={nodeRef}
+                        defaultPosition={position}
+                        bounds="parent"
+                        scale={canvasScale || 1}
+                        onStop={(_, data) => handleDrag(layer.id, data)}
+                      >
+                        <div
+                          ref={nodeRef}
+                          style={{
+                            position: "absolute",
+                            zIndex: (layer.style as { zIndex?: number }).zIndex ?? 1,
+                            ...boxStyle,
+                          }}
+                        >
+                          <TextLayerNode
+                            layer={layer}
+                            onChange={handleTextUpdate}
+                            onZIndexChange={adjustZIndex}
+                              omitPosition
+                            />
+                          </div>
+                        </Draggable>
+                      );
+                    })()
+                  ) : (
+                    <div
+                      key={layer.id}
+                      className="absolute"
+                      style={{
+                        ...layer.style,
+                      }}
+                    >
+                      {layer.content}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        aria-hidden
+        className="pointer-events-none"
+        style={{ position: "fixed", left: "-9999px", top: "-9999px" }}
+      >
+        <div
+          ref={exportRef}
+          className="relative"
           style={{
-            aspectRatio: "3 / 4",
-            maxWidth: "100%",
-            backgroundImage: `url(${bgUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            width: `${logicalWidth}px`,
+            height: `${logicalHeight}px`,
           }}
         >
+          {bgUrl && (
+            <>
+              {/* 导出使用的隐藏底图节点，需保留原生 img 供 html-to-image 读取 */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bgUrl}
+                alt=""
+                crossOrigin="anonymous"
+                loading="eager"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+            </>
+          )}
           {overlayOpacity > 0 && (
             <div
               className="absolute inset-0 pointer-events-none"
@@ -386,35 +593,10 @@ function CanvasPreview() {
           <div className="absolute inset-0">
             {normalizedLayers.map((layer) =>
               layer.type === "text" ? (
-                (() => {
-                  const nodeRef = getNodeRef(layer.id);
-                  const position =
-                    layerPositions[layer.id] ?? {
-                      x: parseFloat(String(layer.style.left ?? "0")) || 0,
-                      y: parseFloat(String(layer.style.top ?? "0")) || 0,
-                    };
-                  return (
-                    <Draggable
-                      key={`${layer.id}-${canvasSize.width}-${canvasSize.height}`}
-                      nodeRef={nodeRef}
-                      defaultPosition={position}
-                      bounds="parent"
-                      onStop={(_, data) => handleDrag(layer.id, data)}
-                    >
-                      <div ref={nodeRef} style={{ position: "absolute", zIndex: (layer.style as { zIndex?: number }).zIndex ?? 1 }}>
-                        <TextLayerNode
-                          layer={layer}
-                          onChange={handleTextUpdate}
-                          onZIndexChange={adjustZIndex}
-                          omitPosition
-                        />
-                      </div>
-                    </Draggable>
-                  );
-                })()
+                <TextLayerNode key={`export-${layer.id}`} layer={layer} readOnly />
               ) : (
                 <div
-                  key={layer.id}
+                  key={`export-${layer.id}`}
                   className="absolute"
                   style={{
                     ...layer.style,
@@ -424,9 +606,6 @@ function CanvasPreview() {
                 </div>
               )
             )}
-          </div>
-          <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[11px] text-white backdrop-blur">
-            Tone: {visualStrategy?.design_plan.tone ?? "未设定"}
           </div>
         </div>
       </div>
@@ -453,46 +632,54 @@ function CanvasPreview() {
                 </div>
                 <div className="mx-auto w-full max-w-[460px] rounded-[32px] bg-[#f7f3ec] shadow-[0_25px_90px_rgba(0,0,0,0.32)] ring-1 ring-black/5">
                   <div className="overflow-hidden rounded-[28px] border border-black/5">
-                    <div
-                      className="relative w-full bg-slate-900"
-                      style={{ aspectRatio: previewRatio }}
-                    >
+                    <div className="relative w-full bg-slate-900" style={{ aspectRatio: previewRatio }}>
                       <div
-                        className="absolute inset-0"
-                        style={{
-                          backgroundImage: `url(${bgUrl})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }}
-                      />
-                      {overlayOpacity > 0 && (
+                        ref={previewShellRef}
+                        className="relative mx-auto h-full w-full"
+                        style={{ aspectRatio: `${logicalWidth} / ${logicalHeight}` }}
+                      >
                         <div
-                          className="absolute inset-0 pointer-events-none"
+                          className="absolute inset-0"
                           style={{
-                            backgroundColor: "rgba(0,0,0,0.6)",
-                            opacity: overlayOpacity,
+                            width: `${logicalWidth}px`,
+                            height: `${logicalHeight}px`,
+                            transform: `scale(${previewScale})`,
+                            transformOrigin: "top left",
+                            backgroundImage: `url(${bgUrl})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
                           }}
-                        />
-                      )}
-                      <div className="absolute inset-0">
-                        {layers.map((layer) =>
-                          layer.type === "text" ? (
-                            <TextLayerNode key={layer.id} layer={layer} readOnly />
-                          ) : (
+                        >
+                          {overlayOpacity > 0 && (
                             <div
-                              key={layer.id}
-                              className="absolute"
+                              className="absolute inset-0 pointer-events-none"
                               style={{
-                                ...layer.style,
+                                backgroundColor: "rgba(0,0,0,0.6)",
+                                opacity: overlayOpacity,
                               }}
-                            >
-                              {layer.content}
-                            </div>
-                          )
-                        )}
+                            />
+                          )}
+                          <div className="absolute inset-0">
+                            {normalizedLayers.map((layer) =>
+                              layer.type === "text" ? (
+                                <TextLayerNode key={layer.id} layer={layer} readOnly />
+                              ) : (
+                                <div
+                                  key={layer.id}
+                                  className="absolute"
+                                  style={{
+                                    ...layer.style,
+                                  }}
+                                >
+                                  {layer.content}
+                                </div>
+                              )
+                            )}
+                          </div>
+                          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+                        </div>
                       </div>
-                      <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
                     </div>
                     <div className="space-y-3 border-t border-black/5 bg-white/85 px-4 pb-4 pt-3 backdrop-blur">
                       <div className="flex items-center gap-3">
@@ -571,10 +758,14 @@ function TextLayerNode({
   const [draft, setDraft] = useState(layer.content);
 
   const normalizedStyle = normalizeStyle(layer.style);
-  const { top, left, right, bottom, position, ...visualStyle } = normalizedStyle as Record<
-    string,
-    unknown
-  >;
+  const visualStyle = useMemo(() => {
+    const positionalKeys = new Set(["top", "left", "right", "bottom", "position"]);
+    return Object.fromEntries(
+      Object.entries(normalizedStyle as Record<string, unknown>).filter(
+        ([key]) => !positionalKeys.has(key)
+      )
+    );
+  }, [normalizedStyle]);
   const appliedStyle = omitPosition
     ? { ...visualStyle }
     : ({
