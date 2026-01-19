@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
 import { generateAll } from "@/app/actions/generate";
-import { deriveFromInput } from "@/lib/placeholder";
 import { useAppStore } from "@/store/use-app-store";
 import type { ProductInput } from "@/types/schema";
 import {
@@ -90,13 +89,9 @@ export function InputSandbox() {
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "生成失败，已使用占位结果";
+          error instanceof Error ? error.message : "生成失败，请检查输入或网络";
         setError(message);
-        const fallback = deriveFromInput(payload);
-        setCopyResult(fallback.copy);
-        setVisualStrategy(fallback.visual);
-        setLayoutConfig(fallback.layout);
-        setStatus("COMPLETED");
+        setStatus("FAILED");
       }
       try {
         if (typeof localStorage !== "undefined") {

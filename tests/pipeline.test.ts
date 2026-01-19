@@ -27,7 +27,7 @@ describe("productInputSchema", () => {
   });
 });
 
-describe("generateAll fallback pipeline", () => {
+describe("generateAll pipeline with missing keys", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -52,15 +52,9 @@ describe("generateAll fallback pipeline", () => {
     process.env = originalEnv;
   });
 
-  it("returns placeholder outputs without API keys", async () => {
+  it("throws when API keys are missing", async () => {
     const { generateAll } = await import("@/app/actions/generate");
-    const result = await generateAll(sampleInput);
-
-    expect(result.copy.product_id).toBe(sampleInput.product_id);
-    expect(result.copy.selling_keywords.length).toBeGreaterThan(0);
-    expect(result.visual.design_plan.canvas.width).toBe(1080);
-    expect(result.layout.canvas.backgroundImage).toContain("placehold.co");
-    expect(result.layout.canvas.width).toBe(1080);
+    await expect(generateAll(sampleInput)).rejects.toThrow();
   }, 10000);
 });
 

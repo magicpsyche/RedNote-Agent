@@ -1,6 +1,5 @@
 "use server";
 
-import { nanoid } from "nanoid";
 import { z } from "zod";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -22,8 +21,6 @@ type GenerateAllResult = {
 type ProviderKey = "SSY" | "ARK";
 type PromptPair = { system: string; user: string };
 
-const DEFAULT_IMAGE_PLACEHOLDER =
-  "https://placehold.co/2304x3072/png?text=Seedream+2304x3072";
 const DEFAULT_TIMEOUT = 45000;
 
 const copyResultSchema = z.object({
@@ -161,11 +158,8 @@ async function generateCopy(
   input: ProductInput,
   llmConfig: ReturnType<typeof getLLMConfig>
 ): Promise<CopyResult> {
-  const fallback = createCopyPlaceholder(input);
-
   if (!llmConfig.apiKey) {
-    console.warn("[generateCopy] missing llm api key, fallback");
-    return fallback;
+    throw new Error("[generateCopy] missing llm api key");
   }
 
   const promptPair =
@@ -192,22 +186,19 @@ async function generateCopy(
     const parsed = copyResultSchema.safeParse(parsedJson);
     if (parsed.success) return parsed.data;
     console.warn("[generateCopy] parse failed, content preview:", content.slice(0, 200));
+    throw new Error("LLM copyResult parse failed");
   } catch (error) {
-    console.error("[generateCopy] 使用 LLM 失败，fallback 占位", error);
+    console.error("[generateCopy] 使用 LLM 失败", error);
+    throw error;
   }
-
-  return fallback;
 }
 
 async function generateVisualStrategy(
   copy: CopyResult,
   llmConfig: ReturnType<typeof getLLMConfig>
 ): Promise<VisualStrategy> {
-  const fallback = createVisualPlaceholder(copy);
-
   if (!llmConfig.apiKey) {
-    console.warn("[generateVisualStrategy] missing llm api key, fallback");
-    return fallback;
+    throw new Error("[generateVisualStrategy] missing llm api key");
   }
 
   const promptPair =
@@ -232,11 +223,12 @@ async function generateVisualStrategy(
     });
     const transformed = transformVisualResponse(content, copy.tone);
     if (transformed) return transformed;
+    console.warn("[generateVisualStrategy] transform failed, content preview:", content.slice(0, 200));
+    throw new Error("LLM visualStrategy parse failed");
   } catch (error) {
-    console.error("[generateVisualStrategy] 使用 LLM 失败，fallback 占位", error);
+    console.error("[generateVisualStrategy] 使用 LLM 失败", error);
+    throw error;
   }
-
-  return fallback;
 }
 
 function transformVisualResponse(content: string, tone: string): VisualStrategy | null {
@@ -334,7 +326,7 @@ async function generateSeedreamImage(
   imageConfig: ReturnType<typeof getImageConfig>
 ): Promise<string> {
   if (!imageConfig.apiKey) {
-    return DEFAULT_IMAGE_PLACEHOLDER;
+    throw new Error("[generateSeedreamImage] missing image api key");
   }
 
   const endpoint =
@@ -370,10 +362,9 @@ async function generateSeedreamImage(
     const url = data.data?.[0]?.url;
     if (url) return url;
   } catch (error) {
-    console.error("[generateSeedreamImage] 生成失败，使用占位图", error);
+    console.error("[generateSeedreamImage] 生成失败", error);
+    throw error;
   }
-
-  return DEFAULT_IMAGE_PLACEHOLDER;
 }
 
 async function generateLayoutConfig(params: {
@@ -382,11 +373,8 @@ async function generateLayoutConfig(params: {
   backgroundImage: string;
   llmConfig: ReturnType<typeof getLLMConfig>;
 }): Promise<LayoutConfig> {
-  const fallback = createLayoutPlaceholder(params.copy, params.visual, params.backgroundImage);
-
   if (!params.llmConfig.apiKey) {
-    console.warn("[generateLayoutConfig] missing llm api key, fallback");
-    return fallback;
+    throw new Error("[generateLayoutConfig] missing llm api key");
   }
 
   const promptPair =
@@ -423,11 +411,11 @@ async function generateLayoutConfig(params: {
         },
       };
     }
+    throw new Error("LLM layout parse failed");
   } catch (error) {
-    console.error("[generateLayoutConfig] 使用 LLM 失败，fallback 占位", error);
+    console.error("[generateLayoutConfig] 使用 LLM 失败", error);
+    throw error;
   }
-
-  return fallback;
 }
 
 async function callChatCompletion({
@@ -540,119 +528,6 @@ function parseJsonLoose(content: string): unknown | null {
     console.warn("[parseJsonLoose] parse failed, preview:", jsonStr.slice(0, 200));
     return null;
   }
-}
-
-function createCopyPlaceholder(input: ProductInput): CopyResult {
-  return {
-    product_id: input.product_id,
-    tone: input.tone,
-    title: `示例标题 ✨ ${input.name}`,
-    content: `为${input.target_audience}准备的${input.name}。\n这里展示文案生成的占位内容。`,
-    tags: ["#示例", "#等待AI生成", "#RedNote"],
-    selling_keywords: input.features.slice(0, 3),
-  };
-}
-
-function createVisualPlaceholder(copy: CopyResult): VisualStrategy {
-  const sellingKeywords = copy.selling_keywords.slice(0, 3);
-  return {
-    seedream_prompt_cn: `${copy.title} 的示例生图提示词（待替换）`,
-    design_plan: {
-      canvas: {
-        width: 1080,
-        height: 1440,
-      },
-      tone: copy.tone,
-      background_color_hex: "#f2f2f2",
-      color_palette: {
-        primary: "#ff6b6b",
-        secondary: "#ffffff",
-        accent: "#18181b",
-      },
-      layout_elements: sellingKeywords.map((keyword, index) => ({
-        type: "text",
-        content: keyword,
-        is_main_title: index === 0,
-        style_config: {
-          font_family: "ZCOOL KuaiLe",
-          font_size: index === 0 ? 52 : 36,
-          font_weight: index === 0 ? "900" : "bold",
-          color: "#18181b",
-          opacity: 0.9,
-          position: {
-            top: `${16 + index * 12}%`,
-            left: "8%",
-            align: "left",
-          },
-          effect: "shadow",
-        },
-      })),
-      decorations: [
-        {
-          type: "svg_icon",
-          shape: "sparkle",
-          color: "#ff6b6b",
-          position: { top: "12%", left: "82%" },
-          size: 28,
-        },
-      ],
-    },
-  };
-}
-
-function createLayoutPlaceholder(
-  copy: CopyResult,
-  visual: VisualStrategy,
-  backgroundImage: string
-): LayoutConfig {
-  const { width, height } = visual.design_plan.canvas;
-
-  return {
-    canvas: {
-      width,
-      height,
-      backgroundImage,
-      tone: visual.design_plan.tone,
-      overlayOpacity: 0.15,
-    },
-    layers: [
-      {
-        id: nanoid(),
-        type: "text",
-        content: copy.title,
-        style: {
-          position: "absolute",
-          top: "10%",
-          left: "0",
-          width: "100%",
-          textAlign: "center",
-          fontFamily: "ZCOOL QingKe HuangYou",
-          fontSize: "64px",
-          fontWeight: 900,
-          color: "#0f172a",
-          textShadow: "0 4px 10px rgba(0,0,0,0.12)",
-          zIndex: 10,
-        },
-      },
-      ...copy.selling_keywords.map((keyword, index) => ({
-        id: nanoid(),
-        type: "text" as const,
-        content: keyword,
-        style: {
-          position: "absolute",
-          top: `${28 + index * 12}%`,
-          left: "6%",
-          padding: "12px 18px",
-          borderRadius: "16px",
-          backgroundColor: "rgba(255,255,255,0.78)",
-          color: "#111827",
-          fontSize: "32px",
-          fontWeight: 700,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-        },
-      })),
-    ],
-  };
 }
 
 function getLLMConfig() {
