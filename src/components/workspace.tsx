@@ -23,9 +23,6 @@ export function Workspace() {
           <h2 className="text-lg font-semibold leading-tight">
             文案预览 + Canvas 编辑器
           </h2>
-          <p className="text-sm text-muted-foreground">
-            左侧文案，右侧 3:4 画布可拖拽排版；导出为 1080×1440。
-          </p>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="rounded-full bg-muted px-3 py-1">
@@ -130,6 +127,7 @@ function CanvasPreview() {
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportQuality, setExportQuality] = useState<"high" | "medium">("high");
+  const dragRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   const bgUrl = layoutConfig?.canvas.backgroundImage ?? PLACEHOLDER_BG;
   const overlayOpacity = layoutConfig?.canvas.overlayOpacity ?? 0;
@@ -250,14 +248,18 @@ function CanvasPreview() {
 
   const previewRatio = 3 / 4;
 
+  const getNodeRef = (id: string) => {
+    if (!dragRefs.current[id]) {
+      dragRefs.current[id] = { current: null };
+    }
+    return dragRefs.current[id];
+  };
+
   return (
     <div className="rounded-xl border border-border/70 bg-background/60 p-4 shadow-inner">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-medium">Canvas 编辑器（3:4）</p>
-          <p className="text-xs text-muted-foreground">
-            底图 2304×3072，按比例缩放展示；导出时输出 1080×1440。
-          </p>
+          <p className="text-sm font-medium">Canvas 编辑器</p>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span>逻辑尺寸：{logicalSize}</span>
@@ -319,22 +321,34 @@ function CanvasPreview() {
             {normalizedLayers.map((layer) =>
               layer.type === "text" ? (
                 <div key={layer.id} className="absolute">
-                  <Draggable
-                    defaultPosition={
-                      layerPositions[layer.id] ?? {
-                        x: parseFloat(String(layer.style.left ?? "0")) || 0,
-                        y: parseFloat(String(layer.style.top ?? "0")) || 0,
-                      }
-                    }
-                    bounds="parent"
-                    onStop={(_, data) => handleDrag(layer.id, data)}
-                  >
-                    <TextLayerNode
-                      layer={layer}
-                      onChange={handleTextUpdate}
-                      onZIndexChange={adjustZIndex}
-                    />
-                  </Draggable>
+                  {/*
+                    react-draggable 在 React 19 需要 nodeRef 避免 findDOMNode，
+                    因此这里显式提供 ref。
+                  */}
+                  {(() => {
+                    const nodeRef = getNodeRef(layer.id);
+                    return (
+                      <Draggable
+                        nodeRef={nodeRef}
+                        defaultPosition={
+                          layerPositions[layer.id] ?? {
+                            x: parseFloat(String(layer.style.left ?? "0")) || 0,
+                            y: parseFloat(String(layer.style.top ?? "0")) || 0,
+                          }
+                        }
+                        bounds="parent"
+                        onStop={(_, data) => handleDrag(layer.id, data)}
+                      >
+                        <div ref={nodeRef}>
+                          <TextLayerNode
+                            layer={layer}
+                            onChange={handleTextUpdate}
+                            onZIndexChange={adjustZIndex}
+                          />
+                        </div>
+                      </Draggable>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div
@@ -348,14 +362,6 @@ function CanvasPreview() {
                 </div>
               )
             )}
-          </div>
-          <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1 text-[11px] font-semibold text-foreground">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/85 px-2 py-1 text-foreground shadow">
-              2304×3072 → 缩放展示
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-1 text-foreground shadow">
-              导出 1080×1440
-            </span>
           </div>
           <div className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[11px] text-white backdrop-blur">
             Tone: {visualStrategy?.design_plan.tone ?? "未设定"}

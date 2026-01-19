@@ -1,6 +1,8 @@
 "use server";
 
 import { z } from "zod";
+import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -110,7 +112,7 @@ const layoutSchema: z.ZodType<LayoutConfig> = z.object({
   ),
 });
 
-const promptCache: Record<string, PromptPair | null> = {};
+const promptCache: Record<string, PromptPair> = {};
 
 export async function generateAll(rawInput: ProductInput): Promise<GenerateAllResult> {
   const input = productInputSchema.parse(rawInput);
@@ -154,6 +156,30 @@ export async function generateAll(rawInput: ProductInput): Promise<GenerateAllRe
   return { copy, visual, layout };
 }
 
+// 分步 server action，便于前端逐阶段更新状态
+export async function generateCopyAction(rawInput: ProductInput): Promise<CopyResult> {
+  const input = productInputSchema.parse(rawInput);
+  return generateCopy(input, getLLMConfig());
+}
+
+export async function generateVisualStrategyAction(
+  copy: CopyResult
+): Promise<VisualStrategy> {
+  return generateVisualStrategy(copy, getLLMConfig());
+}
+
+export async function generateSeedreamImageAction(prompt: string): Promise<string> {
+  return generateSeedreamImage(prompt, getImageConfig());
+}
+
+export async function generateLayoutConfigAction(params: {
+  copy: CopyResult;
+  visual: VisualStrategy;
+  backgroundImage: string;
+}): Promise<LayoutConfig> {
+  return generateLayoutConfig({ ...params, llmConfig: getLLMConfig() });
+}
+
 async function generateCopy(
   input: ProductInput,
   llmConfig: ReturnType<typeof getLLMConfig>
@@ -162,13 +188,7 @@ async function generateCopy(
     throw new Error("[generateCopy] missing llm api key");
   }
 
-  const promptPair =
-    (await loadPromptPair("prompt1.md")) ||
-    ({
-      system:
-        "你是一个拥有百万粉丝的小红书金牌种草博主，擅长用网感语言写爆款文案。\n根据输入产品 JSON 生成包含标题/正文/标签/关键词的结构化结果，严格输出 JSON。\n标题必须含 Emoji，正文需分段并包含目标人群痛点，避免绝对化用词。",
-      user: "Product_JSON: {{Product_JSON}}",
-    } satisfies PromptPair);
+  const promptPair = await loadPromptPair("prompt1.md");
 
   const systemPrompt = promptPair.system;
   const userPrompt = fillTemplate(promptPair.user, {
@@ -176,14 +196,17 @@ async function generateCopy(
   });
 
   try {
-    const content = await callChatCompletion({
+    const { content, raw } = await callChatCompletion({
       systemPrompt,
       userPrompt,
       temperature: 0.8,
       llmConfig,
     });
-    const parsedJson = parseJsonLoose(content);
-    const parsed = copyResultSchema.safeParse(parsedJson);
+    console.log("[generateCopy] raw llm content:", content);
+    console.log("[generateCopy] raw llm response object:", raw);
+
+    const primaryParsed = tryParseJson(content);
+    const parsed = copyResultSchema.safeParse(primaryParsed);
     if (parsed.success) return parsed.data;
     console.warn("[generateCopy] parse failed, content preview:", content.slice(0, 200));
     throw new Error("LLM copyResult parse failed");
@@ -201,13 +224,7 @@ async function generateVisualStrategy(
     throw new Error("[generateVisualStrategy] missing llm api key");
   }
 
-  const promptPair =
-    (await loadPromptPair("prompt2.md")) ||
-    ({
-      system:
-        "你是小红书视觉设计总监，需输出 Seedream 中文生图提示词与排版设计蓝图。\n结合 tone 映射色板与字体，返回 JSON，canvas 固定 1080x1440，使用百分比定位。",
-      user: "copyResult: {{copyResult}}",
-    } satisfies PromptPair);
+  const promptPair = await loadPromptPair("prompt2.md");
 
   const systemPrompt = promptPair.system;
   const userPrompt = fillTemplate(promptPair.user, {
@@ -215,13 +232,16 @@ async function generateVisualStrategy(
   });
 
   try {
-    const content = await callChatCompletion({
+    const { content } = await callChatCompletion({
       systemPrompt,
       userPrompt,
       temperature: 0.7,
       llmConfig,
     });
-    const transformed = transformVisualResponse(content, copy.tone);
+    const jsonCandidate = tryParseJson(content);
+    const transformed =
+      (jsonCandidate && transformVisualResponse(JSON.stringify(jsonCandidate), copy.tone)) ||
+      transformVisualResponse(content, copy.tone);
     if (transformed) return transformed;
     console.warn("[generateVisualStrategy] transform failed, content preview:", content.slice(0, 200));
     throw new Error("LLM visualStrategy parse failed");
@@ -233,7 +253,15 @@ async function generateVisualStrategy(
 
 function transformVisualResponse(content: string, tone: string): VisualStrategy | null {
   try {
-    const raw = JSON.parse(content) as {
+    const cleaned = (() => {
+      const trimmed = content.trim();
+      if (trimmed.startsWith("```")) {
+        return trimmed.replace(/^```[a-z]*\n?/i, "").replace(/```$/, "").trim();
+      }
+      return trimmed;
+    })();
+
+    const raw = JSON.parse(cleaned) as {
       seedream_prompt?: string;
       seedream_prompt_cn?: string;
       layout_blueprint?: Array<{
@@ -377,14 +405,7 @@ async function generateLayoutConfig(params: {
     throw new Error("[generateLayoutConfig] missing llm api key");
   }
 
-  const promptPair =
-    (await loadPromptPair("prompt3.md")) ||
-    ({
-      system:
-        "你是精通 React/Tailwind 的前端专家，读取背景图 URL 与设计蓝图，输出 Canvas 图层 JSON。\n仅支持 text/shape/svg 图层，位置使用绝对定位，禁止用 transform 位移居中。\n返回 JSON，包含 canvas 信息与 layers，确保 backgroundImage 字段填入给定 URL。",
-      user:
-        "Design Plan: {{Design Plan}}\nBackground Image: {{Background Image}}\nCopy: {{Copy}}",
-    } satisfies PromptPair);
+  const promptPair = await loadPromptPair("prompt3.md");
 
   const systemPrompt = promptPair.system;
   const userPrompt = fillTemplate(promptPair.user, {
@@ -394,13 +415,14 @@ async function generateLayoutConfig(params: {
   });
 
   try {
-    const content = await callChatCompletion({
+    const { content } = await callChatCompletion({
       systemPrompt,
       userPrompt,
       temperature: 0.65,
       llmConfig: params.llmConfig,
     });
-    const parsed = layoutSchema.safeParse(JSON.parse(content));
+    const layoutParsed = tryParseJson(content);
+    const parsed = layoutSchema.safeParse(layoutParsed);
     if (parsed.success) {
       return {
         ...parsed.data,
@@ -411,12 +433,18 @@ async function generateLayoutConfig(params: {
         },
       };
     }
+    console.warn("[generateLayoutConfig] parse failed, content preview:", content.slice(0, 200));
     throw new Error("LLM layout parse failed");
   } catch (error) {
     console.error("[generateLayoutConfig] 使用 LLM 失败", error);
     throw error;
   }
 }
+
+type ChatCompletionResult = {
+  content: string;
+  raw: unknown;
+};
 
 async function callChatCompletion({
   systemPrompt,
@@ -428,37 +456,45 @@ async function callChatCompletion({
   userPrompt: string;
   temperature: number;
   llmConfig: ReturnType<typeof getLLMConfig>;
-}): Promise<string> {
-  const response = await fetchWithTimeout(`${llmConfig.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${llmConfig.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: llmConfig.model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature,
-      response_format: { type: "json_object" },
-    }),
-    cache: "no-store",
+}): Promise<ChatCompletionResult> {
+  const client = createOpenAI({
+    apiKey: llmConfig.apiKey || "",
+    baseURL: llmConfig.baseUrl,
+  });
+  const model = client.chat(llmConfig.model);
+
+  const messages = [
+    { role: "system" as const, content: systemPrompt },
+    { role: "user" as const, content: userPrompt },
+  ];
+
+  // 调试用：打印请求设置与完整 payload（不含 key）
+  const payload = {
+    baseURL: llmConfig.baseUrl,
+    model: llmConfig.model,
+    temperature,
+    messages,
+  };
+  console.log("[callChatCompletion] systemPrompt length:", systemPrompt.length);
+  console.log("[callChatCompletion] userPrompt length:", userPrompt.length);
+  console.log("[callChatCompletion] systemPrompt head:", systemPrompt.slice(0, 120));
+  console.log("[callChatCompletion] systemPrompt tail:", systemPrompt.slice(-200));
+  console.log("[callChatCompletion] payload (pretty):", JSON.stringify(payload, null, 2));
+
+  const result = await generateText({
+    model,
+    messages,
+    temperature,
   });
 
-  if (!response.ok) {
-    throw new Error(`LLM 请求失败: ${response.status} ${await response.text()}`);
-  }
+  console.log("[callChatCompletion] usage:", result.usage);
+  console.log("[callChatCompletion] responseMessages:", result.responseMessages);
 
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string | null } }>;
-  };
-  const content = data.choices?.[0]?.message?.content;
+  const content = result.text;
   if (!content) {
     throw new Error("LLM 返回空内容");
   }
-  return content;
+  return { content, raw: result.responseMessages };
 }
 
 function fetchWithTimeout(url: string, init: RequestInit, timeout = DEFAULT_TIMEOUT) {
@@ -482,25 +518,25 @@ async function loadPromptFromFile(filename: string): Promise<string | null> {
   }
 }
 
-async function loadPromptPair(filename: string): Promise<PromptPair | null> {
+async function loadPromptPair(filename: string): Promise<PromptPair> {
   if (filename in promptCache) return promptCache[filename];
+
   const content = await loadPromptFromFile(filename);
   if (!content) {
-    promptCache[filename] = null;
-    return null;
+    throw new Error(`[loadPromptPair] 找不到 prompt 文件: ${filename}`);
   }
 
-  const systemMatch =
-    content.match(/System_Prompt\s*=\s*`([\s\S]*?)`/i) ||
-    content.match(/SYSTEM_PROMPT\s*=\s*`([\s\S]*?)`/i);
-  const userMatch = content.match(/User_Prompt\s*=\s*`([\s\S]*?)`/i);
+  const systemMatch = content.match(/<<<SYSTEM>>>([\s\S]*?)<<<END_SYSTEM>>>/);
+  const userMatch = content.match(/<<<USER>>>([\s\S]*?)<<<END_USER>>>/);
 
   if (!systemMatch || !userMatch) {
-    promptCache[filename] = null;
-    return null;
+    throw new Error(`[loadPromptPair] prompt 文件缺少 SYSTEM/USER 区块: ${filename}`);
   }
 
-  const pair: PromptPair = { system: systemMatch[1], user: userMatch[1] };
+  const system = cleanPromptBlock(systemMatch[1]);
+  const user = cleanPromptBlock(userMatch[1]);
+
+  const pair: PromptPair = { system, user };
   promptCache[filename] = pair;
   return pair;
 }
@@ -516,18 +552,31 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
 }
 
-function parseJsonLoose(content: string): unknown | null {
-  const trimmed = content.trim();
-  const fenceMatch = trimmed.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);
-  const candidate = fenceMatch ? fenceMatch[1] : trimmed;
-  const braceMatch = candidate.match(/{[\\s\\S]*}/);
-  const jsonStr = braceMatch ? braceMatch[0] : candidate;
+function tryParseJson(content: string | undefined | null): unknown | null {
+  if (!content) return null;
+  let trimmed = content.trim();
+  if (!trimmed) return null;
+
+  // 处理 ```json ... ``` 包裹的情况
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
+  if (fenceMatch) {
+    trimmed = fenceMatch[1].trim();
+  }
+
   try {
-    return JSON.parse(jsonStr);
+    return JSON.parse(trimmed);
   } catch {
-    console.warn("[parseJsonLoose] parse failed, preview:", jsonStr.slice(0, 200));
+    console.warn("[tryParseJson] parse failed, preview:", trimmed.slice(0, 200));
     return null;
   }
+}
+
+function cleanPromptBlock(block: string): string {
+  const trimmed = block.trim();
+  // 去掉可能残留的前缀/反引号包裹
+  const withoutPrefix = trimmed.replace(/^System_Prompt=`?/i, "").replace(/^User_Prompt=`?/i, "");
+  const withoutSuffix = withoutPrefix.replace(/`$/, "").trim();
+  return withoutSuffix;
 }
 
 function getLLMConfig() {

@@ -5,7 +5,12 @@ import Editor from "@monaco-editor/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { generateAll } from "@/app/actions/generate";
+import {
+  generateCopyAction,
+  generateLayoutConfigAction,
+  generateSeedreamImageAction,
+  generateVisualStrategyAction,
+} from "@/app/actions/generate";
 import { useAppStore } from "@/store/use-app-store";
 import type { ProductInput } from "@/types/schema";
 import {
@@ -65,28 +70,34 @@ export function InputSandbox() {
       setVisualStrategy(null);
       setLayoutConfig(null);
       setStatus("GENERATING_COPY");
-
       try {
-        const result = await generateAll(payload);
-        const stages = [
-          () => {
-            setCopyResult(result.copy);
-            setStatus("GENERATING_STRATEGY");
-          },
-          () => {
-            setVisualStrategy(result.visual);
-            setStatus("GENERATING_IMAGE");
-          },
-          () => {
-            setLayoutConfig(result.layout);
-            setStatus("GENERATING_LAYOUT");
-          },
-          () => setStatus("COMPLETED"),
-        ];
+        const copy = await generateCopyAction(payload);
+        setCopyResult(copy);
+        setStatus("GENERATING_STRATEGY");
 
-        stages.forEach((fn, idx) => {
-          setTimeout(fn, 140 * idx);
-        });
+        const visual = await generateVisualStrategyAction(copy);
+        setVisualStrategy(visual);
+        setStatus("GENERATING_IMAGE");
+
+        const bgUrl = await generateSeedreamImageAction(visual.seedream_prompt_cn);
+        setStatus("GENERATING_IMAGE"); // 生图完成后再确认一次状态
+
+        // 先行更新画布背景，便于前端立即显示生图
+        setLayoutConfig((prev) => ({
+          canvas: {
+            width: visual.design_plan.canvas.width,
+            height: visual.design_plan.canvas.height,
+            backgroundImage: bgUrl,
+            tone: visual.design_plan.tone,
+            overlayOpacity: visual.design_plan.canvas.overlayOpacity ?? 0.05,
+          },
+          layers: prev?.layers ?? [],
+        }));
+
+        const layout = await generateLayoutConfigAction({ copy, visual, backgroundImage: bgUrl });
+        setLayoutConfig(layout);
+        setStatus("GENERATING_LAYOUT");
+        setTimeout(() => setStatus("COMPLETED"), 150);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "生成失败，请检查输入或网络";
@@ -102,14 +113,7 @@ export function InputSandbox() {
         console.warn("Persist input failed", err);
       }
     },
-    [
-      setCopyResult,
-      setError,
-      setInput,
-      setLayoutConfig,
-      setStatus,
-      setVisualStrategy,
-    ]
+    [setCopyResult, setError, setInput, setLayoutConfig, setStatus, setVisualStrategy]
   );
 
   const handleSubmit = useCallback(
@@ -176,16 +180,7 @@ export function InputSandbox() {
     <section className="rounded-2xl border border-border/80 bg-card/70 p-5 shadow-sm backdrop-blur">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-primary">Input Sandbox</p>
           <h2 className="text-lg font-semibold leading-tight">输入区</h2>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full bg-muted px-3 py-1">
-            底图：2304×3072 → 画布缩放展示
-          </span>
-          <span className="rounded-full bg-muted px-3 py-1">
-            导出目标：1080×1440
-          </span>
         </div>
       </div>
 
@@ -202,9 +197,6 @@ export function InputSandbox() {
             active={activeTab === "form"}
             onClick={() => setActiveTab("form")}
           />
-          <span className="ml-auto text-xs text-muted-foreground">
-            可编辑：Monaco / react-hook-form + zod
-          </span>
         </div>
 
         {activeTab === "json" ? (
@@ -279,9 +271,6 @@ export function InputSandbox() {
               >
                 提交并生成
               </button>
-              <p className="text-xs text-muted-foreground">
-                输入后提交，数据将写入 Zustand 并触发 Server Action。
-              </p>
             </form>
           </div>
         )}
@@ -297,6 +286,13 @@ export function InputSandbox() {
         >
           重置
         </button>
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted/60 transition"
+        >
+          {collapsed ? "展开输入区" : "折叠输入区"}
+        </button>
         {activeTab === "json" && (
           <button
             type="button"
@@ -310,13 +306,6 @@ export function InputSandbox() {
         {error && (
           <span ref={errorRef} className="text-xs font-semibold text-destructive">{error}</span>
         )}
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted/60 transition"
-        >
-          {collapsed ? "展开输入区" : "折叠输入区"}
-        </button>
       </div>
     </section>
   );
