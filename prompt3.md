@@ -108,6 +108,6 @@ SYSTEM_PROMPT = `
 `
 
 User_Prompt=`
-Design Plan: {{Design Plan}}
+Design Plan: {{Design Plan}} 
 Background Image: {{Background Image}}
 `

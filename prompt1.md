@@ -64,6 +64,4 @@ System_Prompt=`
 等待用户输入
 `
 
-User_Prompt=`
-Product_JSON: {{Product_JSON}}
-`
+User_Prompt=`Product_JSON: {{Product_JSON}}`

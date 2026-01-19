@@ -20,6 +20,7 @@ type GenerateAllResult = {
 };
 
 type ProviderKey = "SSY" | "ARK";
+type PromptPair = { system: string; user: string };
 
 const DEFAULT_IMAGE_PLACEHOLDER =
   "https://placehold.co/2304x3072/png?text=Seedream+2304x3072";
@@ -112,7 +113,7 @@ const layoutSchema: z.ZodType<LayoutConfig> = z.object({
   ),
 });
 
-let prompt2Cache: string | null = null;
+const promptCache: Record<string, PromptPair | null> = {};
 
 export async function generateAll(rawInput: ProductInput): Promise<GenerateAllResult> {
   const input = productInputSchema.parse(rawInput);
@@ -167,15 +168,18 @@ async function generateCopy(
     return fallback;
   }
 
-  const systemPrompt =
-    (await loadPromptFromFile("prompt1.md")) ||
-    [
-      "你是一个拥有百万粉丝的小红书金牌种草博主，擅长用网感语言写爆款文案。",
-      "根据输入产品 JSON 生成包含标题/正文/标签/关键词的结构化结果，严格输出 JSON。",
-      "标题必须含 Emoji，正文需分段并包含目标人群痛点，避免绝对化用词。",
-    ].join("\n");
+  const promptPair =
+    (await loadPromptPair("prompt1.md")) ||
+    ({
+      system:
+        "你是一个拥有百万粉丝的小红书金牌种草博主，擅长用网感语言写爆款文案。\n根据输入产品 JSON 生成包含标题/正文/标签/关键词的结构化结果，严格输出 JSON。\n标题必须含 Emoji，正文需分段并包含目标人群痛点，避免绝对化用词。",
+      user: "Product_JSON: {{Product_JSON}}",
+    } satisfies PromptPair);
 
-  const userPrompt = `Product_JSON: ${JSON.stringify(input)}`;
+  const systemPrompt = promptPair.system;
+  const userPrompt = fillTemplate(promptPair.user, {
+    Product_JSON: JSON.stringify(input),
+  });
 
   try {
     const content = await callChatCompletion({
@@ -206,18 +210,22 @@ async function generateVisualStrategy(
     return fallback;
   }
 
-  const prompt2Content =
-    (await loadPromptFromFile("prompt2.md")) ||
-    [
-      "你是小红书视觉设计总监，需输出 Seedream 中文生图提示词与排版设计蓝图。",
-      "结合 tone 映射色板与字体，返回 JSON，canvas 固定 1080x1440，使用百分比定位。",
-    ].join("\n");
+  const promptPair =
+    (await loadPromptPair("prompt2.md")) ||
+    ({
+      system:
+        "你是小红书视觉设计总监，需输出 Seedream 中文生图提示词与排版设计蓝图。\n结合 tone 映射色板与字体，返回 JSON，canvas 固定 1080x1440，使用百分比定位。",
+      user: "copyResult: {{copyResult}}",
+    } satisfies PromptPair);
 
-  const userPrompt = `copyResult: ${JSON.stringify(copy)}`;
+  const systemPrompt = promptPair.system;
+  const userPrompt = fillTemplate(promptPair.user, {
+    copyResult: JSON.stringify(copy),
+  });
 
   try {
     const content = await callChatCompletion({
-      systemPrompt: prompt2Content,
+      systemPrompt,
       userPrompt,
       temperature: 0.7,
       llmConfig,
@@ -381,18 +389,21 @@ async function generateLayoutConfig(params: {
     return fallback;
   }
 
-  const systemPrompt = [
-    "你是精通 React/Tailwind 的前端专家，读取背景图 URL 与设计蓝图，输出 Canvas 图层 JSON。",
-    "仅支持 text/shape/svg 图层，位置使用绝对定位，禁止用 transform 位移居中。",
-    "返回 JSON，包含 canvas 信息与 layers，确保 backgroundImage 字段填入给定 URL。",
-  ].join("\n");
+  const promptPair =
+    (await loadPromptPair("prompt3.md")) ||
+    ({
+      system:
+        "你是精通 React/Tailwind 的前端专家，读取背景图 URL 与设计蓝图，输出 Canvas 图层 JSON。\n仅支持 text/shape/svg 图层，位置使用绝对定位，禁止用 transform 位移居中。\n返回 JSON，包含 canvas 信息与 layers，确保 backgroundImage 字段填入给定 URL。",
+      user:
+        "Design Plan: {{Design Plan}}\nBackground Image: {{Background Image}}\nCopy: {{Copy}}",
+    } satisfies PromptPair);
 
-  const userPrompt = [
-    `Design Plan: ${JSON.stringify(params.visual.design_plan)}`,
-    `Background Image: ${params.backgroundImage}`,
-    `Copy: ${JSON.stringify({ title: params.copy.title, tags: params.copy.tags })}`,
-    "Rules: \n- canvas 1080x1440, use position absolute with % where possible\n- no transform translate for positioning\n- text layers only, font from plan font_family, color palette primary/secondary/accent\n- ensure readability on given backgroundImage; add textShadow if high contrast needed\n- include at least: title layer, 3 selling keyword tags, optional slogan\n- align with design_plan layout_elements positions (top/left %).",
-  ].join("\n");
+  const systemPrompt = promptPair.system;
+  const userPrompt = fillTemplate(promptPair.user, {
+    "Design Plan": JSON.stringify(params.visual.design_plan),
+    "Background Image": params.backgroundImage,
+    Copy: JSON.stringify({ title: params.copy.title, tags: params.copy.tags }),
+  });
 
   try {
     const content = await callChatCompletion({
@@ -473,16 +484,48 @@ function fetchWithTimeout(url: string, init: RequestInit, timeout = DEFAULT_TIME
 }
 
 async function loadPromptFromFile(filename: string): Promise<string | null> {
-  if (filename === "prompt2.md" && prompt2Cache) return prompt2Cache;
   try {
     const filePath = path.resolve(process.cwd(), filename);
     const content = await readFile(filePath, "utf-8");
-    if (filename === "prompt2.md") prompt2Cache = content;
     return content;
   } catch (error) {
     console.warn(`[loadPromptFromFile] 读取失败: ${filename}`, error);
     return null;
   }
+}
+
+async function loadPromptPair(filename: string): Promise<PromptPair | null> {
+  if (filename in promptCache) return promptCache[filename];
+  const content = await loadPromptFromFile(filename);
+  if (!content) {
+    promptCache[filename] = null;
+    return null;
+  }
+
+  const systemMatch =
+    content.match(/System_Prompt\s*=\s*`([\s\S]*?)`/i) ||
+    content.match(/SYSTEM_PROMPT\s*=\s*`([\s\S]*?)`/i);
+  const userMatch = content.match(/User_Prompt\s*=\s*`([\s\S]*?)`/i);
+
+  if (!systemMatch || !userMatch) {
+    promptCache[filename] = null;
+    return null;
+  }
+
+  const pair: PromptPair = { system: systemMatch[1], user: userMatch[1] };
+  promptCache[filename] = pair;
+  return pair;
+}
+
+function fillTemplate(template: string, replacements: Record<string, string>) {
+  return Object.entries(replacements).reduce((acc, [key, value]) => {
+    const pattern = new RegExp(`{{\\s*${escapeRegExp(key)}\\s*}}`, "g");
+    return acc.replace(pattern, value);
+  }, template);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&");
 }
 
 function parseJsonLoose(content: string): unknown | null {

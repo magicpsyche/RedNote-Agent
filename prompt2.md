@@ -123,6 +123,4 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
 # Data Input
 `
 
-User_Prompt=`
-copyResult: {{copyResult}}
-`
+User_Prompt=`copyResult: {{copyResult}}`
