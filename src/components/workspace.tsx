@@ -260,10 +260,6 @@ function CanvasPreview() {
         <div>
           <p className="text-sm font-medium">Canvas 编辑器</p>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span>逻辑尺寸：{logicalSize}</span>
-          <span>底图：2304×3072（Seedream）</span>
-        </div>
       </div>
 
       <div className="flex items-center gap-2 pb-2 text-xs">
