@@ -123,7 +123,11 @@ export async function generateAll(rawInput: ProductInput): Promise<GenerateAllRe
   console.log("[generateAll] start", {
     product_id: input.product_id,
     llmBase: llmConfig.baseUrl,
+    llmModel: llmConfig.model,
+    llmKeyPresent: Boolean(llmConfig.apiKey),
     imageBase: imageConfig.baseUrl,
+    imageModel: imageConfig.model,
+    imageKeyPresent: Boolean(imageConfig.apiKey),
   });
 
   const copy = await generateCopy(input, llmConfig);
@@ -159,6 +163,7 @@ async function generateCopy(
   const fallback = createCopyPlaceholder(input);
 
   if (!llmConfig.apiKey) {
+    console.warn("[generateCopy] missing llm api key, fallback");
     return fallback;
   }
 
@@ -193,6 +198,7 @@ async function generateVisualStrategy(
   const fallback = createVisualPlaceholder(copy);
 
   if (!llmConfig.apiKey) {
+    console.warn("[generateVisualStrategy] missing llm api key, fallback");
     return fallback;
   }
 
@@ -367,6 +373,7 @@ async function generateLayoutConfig(params: {
   const fallback = createLayoutPlaceholder(params.copy, params.visual, params.backgroundImage);
 
   if (!params.llmConfig.apiKey) {
+    console.warn("[generateLayoutConfig] missing llm api key, fallback");
     return fallback;
   }
 
