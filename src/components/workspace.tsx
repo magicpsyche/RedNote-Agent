@@ -32,7 +32,7 @@ export function Workspace() {
             文案：{copyResult ? "已生成" : "待生成"}
           </span>
           <span className="rounded-full bg-muted px-3 py-1">
-            图层：{layoutConfig?.layers.length ?? 0}
+            图层：{layoutConfig?.layers?.length ?? 0}
           </span>
         </div>
       </div>
