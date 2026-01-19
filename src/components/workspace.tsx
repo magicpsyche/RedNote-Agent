@@ -129,11 +129,12 @@ function CanvasPreview() {
   const [exportQuality, setExportQuality] = useState<"high" | "medium">("high");
   const dragRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
-  const bgUrl = layoutConfig?.canvas.backgroundImage ?? PLACEHOLDER_BG;
-  const overlayOpacity = layoutConfig?.canvas.overlayOpacity ?? 0;
-  const logicalSize = layoutConfig
-    ? `${layoutConfig.canvas.width}×${layoutConfig.canvas.height}`
-    : "1080×1440";
+  const bgUrl = layoutConfig?.canvas?.backgroundImage ?? PLACEHOLDER_BG;
+  const overlayOpacity = layoutConfig?.canvas?.overlayOpacity ?? 0;
+  const logicalSize =
+    layoutConfig?.canvas?.width && layoutConfig?.canvas?.height
+      ? `${layoutConfig.canvas.width}×${layoutConfig.canvas.height}`
+      : "1080×1440";
 
   const layers = useMemo(() => layoutConfig?.layers ?? [], [layoutConfig]);
   const normalizedLayers = useMemo(
