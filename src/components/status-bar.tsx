@@ -14,6 +14,16 @@ const pipeline: { code: AppStatus; label: string }[] = [
   { code: "COMPLETED", label: "完成" },
 ];
 
+const dotColors: Record<AppStatus, string> = {
+  IDLE: "#2dd4bf", // teal
+  GENERATING_COPY: "#f59e0b", // amber
+  GENERATING_STRATEGY: "#6366f1", // indigo
+  GENERATING_IMAGE: "#e879f9", // fuchsia
+  GENERATING_LAYOUT: "#22d3ee", // cyan
+  COMPLETED: "#10b981", // emerald
+  FAILED: "#ef4444",
+};
+
 export function StatusBar() {
   const status = useAppStore((state) => state.status);
 
@@ -27,6 +37,8 @@ export function StatusBar() {
       {pipeline.map((step, index) => {
         const isActive = index === activeIndex;
         const isCompleted = index < activeIndex;
+        const color = dotColors[step.code];
+        const dimmed = `${color}55`;
         return (
           <div
             key={step.code}
@@ -38,7 +50,18 @@ export function StatusBar() {
                   : "bg-secondary text-secondary-foreground"
             }`}
           >
-            <span className="h-2 w-2 rounded-full bg-current opacity-80" />
+            <span
+              className="h-2 w-2 flex-shrink-0 rounded-full"
+              style={{
+                backgroundColor: isActive ? color : dimmed,
+                boxShadow: isActive
+                  ? `0 0 0 0 ${color}55`
+                  : "0 0 0 0 rgba(0,0,0,0.12)",
+                opacity: isActive ? 1 : 0.55,
+                filter: isActive ? "none" : "grayscale(0.4)",
+                animation: isActive ? "status-breathe 2s ease-in-out infinite" : "none",
+              }}
+            />
             <span className="font-medium">{step.label}</span>
           </div>
         );
@@ -48,6 +71,19 @@ export function StatusBar() {
           失败
         </span>
       )}
+      <style jsx global>{`
+        @keyframes status-breathe {
+          0%,
+          100% {
+            transform: scale(0.9);
+            opacity: 0.7;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

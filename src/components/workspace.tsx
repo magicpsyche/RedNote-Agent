@@ -72,6 +72,27 @@ function normalizeStyle(style: TextLayer["style"]): TextLayer["style"] {
 function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[] }) {
   const { copyResult } = useAppStore();
 
+  const handleCopy = async () => {
+    const text = copyResult?.content;
+    if (!text) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    } catch (error) {
+      console.error("Copy failed", error);
+    }
+  };
+
   return (
     <div className="rounded-xl border border-border/70 bg-background/60 p-4 shadow-inner">
       <div className="flex items-start justify-between">
@@ -91,9 +112,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
             <button
               type="button"
               disabled={!copyPresent}
-              onClick={() => {
-                if (copyResult?.content) void navigator.clipboard.writeText(copyResult.content);
-              }}
+              onClick={() => void handleCopy()}
               className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted/60 disabled:opacity-50"
             >
               复制正文
@@ -224,12 +243,31 @@ function CanvasPreview() {
     if (!canvasRef.current || !layoutConfig) return;
     setIsExporting(true);
     try {
-      const dataUrl = await toPng(canvasRef.current, {
+      const node = canvasRef.current;
+      const cleanup: Array<() => void> = [];
+      const prevInline = {
+        width: node.style.width,
+        height: node.style.height,
+        maxWidth: node.style.maxWidth,
+      };
+
+      node.style.width = "1080px";
+      node.style.height = "1440px";
+      node.style.maxWidth = "unset";
+
+      const restoreBg = await inlineBackground(node, bgUrl);
+      if (restoreBg) cleanup.push(restoreBg);
+
+      const dataUrl = await toPng(node, {
         width: 1080,
         height: 1440,
+        pixelRatio: 1,
+        cacheBust: true,
+        skipFonts: true,
         style: {
-          width: `${1080}px`,
-          height: `${1440}px`,
+          width: "1080px",
+          height: "1440px",
+          maxWidth: "unset",
         },
       });
       const link = document.createElement("a");
@@ -239,7 +277,40 @@ function CanvasPreview() {
     } catch (error) {
       console.error("Export failed", error);
     } finally {
+      if (canvasRef.current) {
+        canvasRef.current.style.width = prevInline.width;
+        canvasRef.current.style.height = prevInline.height;
+        canvasRef.current.style.maxWidth = prevInline.maxWidth;
+      }
+      cleanup.forEach((fn) => fn());
       setIsExporting(false);
+    }
+  };
+
+  const inlineBackground = async (node: HTMLDivElement, imageUrl: string) => {
+    if (!imageUrl) return null;
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") resolve(reader.result);
+          else reject(new Error("Failed to load background image"));
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      const prev = node.style.backgroundImage;
+      node.style.backgroundImage = `url(${dataUrl})`;
+
+      return () => {
+        node.style.backgroundImage = prev;
+      };
+    } catch (error) {
+      console.error("Failed to inline background", error);
+      return null;
     }
   };
 

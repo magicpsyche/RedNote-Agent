@@ -121,6 +121,7 @@ export function InputSandbox() {
       startTransition(() => {
         try {
           const parsed = coerceProductInput(payload);
+          setCollapsed(true);
           void pushToStore(parsed);
         } catch (error) {
           if (error instanceof Error) setError(error.message);
@@ -133,6 +134,7 @@ export function InputSandbox() {
   const handleJsonSubmit = useCallback(() => {
     try {
       const parsed = coerceProductInput(JSON.parse(jsonValue));
+      setCollapsed(true);
       handleSubmit(parsed);
       setJsonError(null);
     } catch (error) {
@@ -186,127 +188,150 @@ export function InputSandbox() {
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
           aria-label={collapsed ? "展开输入区" : "折叠输入区"}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-lg font-semibold text-foreground hover:bg-muted/70 transition"
+          aria-expanded={!collapsed}
+          className="inline-flex h-9 w-9 items-center justify-center text-lg font-semibold text-foreground transition-transform duration-300 hover:scale-105 active:scale-95"
         >
-          ▼
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            className={`h-4 w-4 transition-transform duration-300 ${
+              collapsed ? "-rotate-90" : "rotate-0"
+            }`}
+          >
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
       </div>
 
-      {!collapsed && (
-      <div className="rounded-xl border border-border/80 bg-background/60 shadow-inner">
-        <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-          <TabButton
-            label="JSON 模式"
-            active={activeTab === "json"}
-            onClick={() => setActiveTab("json")}
-          />
-          <TabButton
-            label="Form 模式"
-            active={activeTab === "form"}
-            onClick={() => setActiveTab("form")}
-          />
-        </div>
-
-        {activeTab === "json" ? (
-          <div className="p-4">
-            <div className="mt-3 h-[260px] overflow-hidden rounded-lg border border-border/60 bg-muted/40">
-              <Editor
-                height="100%"
-                defaultLanguage="json"
-                value={jsonValue}
-                onChange={(value) => setJsonValue(value ?? "")}
-                theme="vs-light"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  wordWrap: "on",
-                }}
-              />
-            </div>
-            {jsonError && (
-              <p className="mt-2 text-xs font-semibold text-destructive">{jsonError}</p>
-            )}
+      <div
+        className={`grid gap-4 overflow-hidden transition-all duration-500 ease-out ${
+          collapsed
+            ? "pointer-events-none max-h-0 -translate-y-1 opacity-0"
+            : "max-h-[2000px] translate-y-0 opacity-100"
+        }`}
+      >
+        <div className="rounded-xl border border-border/80 bg-background/60 shadow-inner">
+          <div className="flex items-center gap-2 border-b border-border px-4 py-2">
+            <TabButton
+              label="JSON 模式"
+              active={activeTab === "json"}
+              onClick={() => setActiveTab("json")}
+            />
+            <TabButton
+              label="Form 模式"
+              active={activeTab === "form"}
+              onClick={() => setActiveTab("form")}
+            />
           </div>
-        ) : (
-          <div className="p-4">
-            <form
-              className="mt-3 grid gap-2 text-sm"
+
+          {activeTab === "json" ? (
+            <div className="p-4">
+              <div className="mt-3 h-[260px] overflow-hidden rounded-lg border border-border/60 bg-muted/40">
+                <Editor
+                  height="100%"
+                  defaultLanguage="json"
+                  value={jsonValue}
+                  onChange={(value) => setJsonValue(value ?? "")}
+                  theme="vs-light"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    wordWrap: "on",
+                  }}
+                />
+              </div>
+              {jsonError && (
+                <p className="mt-2 text-xs font-semibold text-destructive">{jsonError}</p>
+              )}
+            </div>
+          ) : (
+            <div className="p-4">
+              <form
+                className="mt-3 grid gap-2 text-sm"
               onSubmit={form.handleSubmit((values) => {
+                setCollapsed(true);
                 handleSubmit(values);
               })}
             >
               <div className="grid grid-cols-2 gap-2">
                 <FormField form={form} name="product_id" label="产品 ID" />
-                <FormField form={form} name="name" label="产品名称" />
-                <FormField form={form} name="category" label="类目" />
-                <FormField form={form} name="price" label="价格" type="number" />
-                <FormField form={form} name="target_audience" label="人群/痛点" />
-                <FormField form={form} name="selling_point" label="卖点" />
-                <FormField
-                  form={form}
-                  name="features"
-                  label="特色（以逗号分隔）"
-                  transform={(value) =>
-                    value
-                      .split(",")
-                      .map((item: string) => item.trim())
-                      .filter(Boolean)
-                  }
-                />
-                <div className="grid gap-1">
-                  <label className="text-xs text-muted-foreground">调性</label>
-                  <select
-                    className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
-                    {...form.register("tone")}
-                  >
-                    {toneOptions.map((tone) => (
-                      <option key={tone} value={tone}>
-                        {tone}
-                      </option>
-                    ))}
-                  </select>
-                  {form.formState.errors.tone && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.tone.message}
-                    </p>
-                  )}
+                  <FormField form={form} name="name" label="产品名称" />
+                  <FormField form={form} name="category" label="类目" />
+                  <FormField form={form} name="price" label="价格" type="number" />
+                  <FormField form={form} name="target_audience" label="人群/痛点" />
+                  <FormField form={form} name="selling_point" label="卖点" />
+                  <FormField
+                    form={form}
+                    name="features"
+                    label="特色（以逗号分隔）"
+                    transform={(value) =>
+                      value
+                        .split(",")
+                        .map((item: string) => item.trim())
+                        .filter(Boolean)
+                    }
+                  />
+                  <div className="grid gap-1">
+                    <label className="text-xs text-muted-foreground">调性</label>
+                    <select
+                      className="h-10 rounded-lg border border-border bg-background px-3 text-sm"
+                      {...form.register("tone")}
+                    >
+                      {toneOptions.map((tone) => (
+                        <option key={tone} value={tone}>
+                          {tone}
+                        </option>
+                      ))}
+                    </select>
+                    {form.formState.errors.tone && (
+                      <p className="text-xs text-destructive">
+                        {form.formState.errors.tone.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <button
-                type="submit"
-                disabled={isPending}
-                className="inline-flex items-center justify-center rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow hover:shadow-md transition"
-              >
-                提交并生成
-              </button>
-            </form>
-          </div>
-        )}
-      </div>
-      )}
+            <button
+              type="submit"
+              disabled={isPending}
+              onClick={() => setCollapsed(true)}
+              className="inline-flex items-center justify-center rounded-full bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow transition hover:shadow-md"
+            >
+              提交并生成
+            </button>
+          </form>
+            </div>
+          )}
+        </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={resetAll}
-          disabled={isDisabled}
-          className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/60 transition disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          重置
-        </button>
-        {activeTab === "json" && (
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            onClick={handleJsonSubmit}
+            onClick={resetAll}
             disabled={isDisabled}
-            className="ml-auto inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/60 transition disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            提交 JSON
+            重置
           </button>
-        )}
-        {error && (
-          <span ref={errorRef} className="text-xs font-semibold text-destructive">{error}</span>
-        )}
+          {activeTab === "json" && (
+            <button
+              type="button"
+              onClick={handleJsonSubmit}
+              disabled={isDisabled}
+              onClickCapture={() => setCollapsed(true)}
+              className="ml-auto inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              提交 JSON
+            </button>
+          )}
+          {error && (
+            <span ref={errorRef} className="text-xs font-semibold text-destructive">
+              {error}
+            </span>
+          )}
+        </div>
       </div>
     </section>
   );
