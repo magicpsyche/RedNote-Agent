@@ -289,7 +289,7 @@ export function InputSandbox() {
         <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
-          className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground hover:bg-muted/60 transition"
+          className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/60 transition"
         >
           {collapsed ? "展开输入区" : "折叠输入区"}
         </button>
