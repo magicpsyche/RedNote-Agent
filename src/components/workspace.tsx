@@ -361,114 +361,116 @@ function CanvasPreview() {
       </div>
 
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/55 px-4 py-8 backdrop-blur">
-          <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-border/70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_38%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.04),transparent_42%),rgba(13,13,15,0.92)] shadow-2xl">
-            <button
-              className="absolute right-4 top-4 rounded-full border border-border/60 bg-black/60 px-4 py-1 text-sm text-white backdrop-blur hover:bg-white/10"
-              onClick={() => setPreviewOpen(false)}
-            >
-              关闭
-            </button>
-            <div className="grid gap-6 p-6 lg:grid-cols-[320px,1fr] lg:items-start">
-              <div className="space-y-3 text-xs text-slate-200">
-                <p className="text-sm font-semibold text-white">预览（小红书风格）</p>
-                <p>顶部为合成封面，底部为笔记文案区，整体居中展现为分享态弹窗。</p>
-                <div className="flex items-center gap-3 text-[11px] text-slate-300">
-                  <span className="rounded-full bg-white/10 px-3 py-1">3:4 封面</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1">图层可视化</span>
-                  <span className="rounded-full bg-white/10 px-3 py-1">文案排版</span>
+        <div className="fixed inset-0 z-40 overflow-auto bg-black/55 backdrop-blur">
+          <div className="flex min-h-screen items-center justify-center px-4 py-8">
+            <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-border/70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_38%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.04),transparent_42%),rgba(13,13,15,0.92)] shadow-2xl">
+              <button
+                className="absolute right-4 top-4 rounded-full border border-border/60 bg-black/60 px-4 py-1 text-sm text-white backdrop-blur hover:bg-white/10"
+                onClick={() => setPreviewOpen(false)}
+              >
+                关闭
+              </button>
+              <div className="grid gap-6 p-6 lg:grid-cols-[320px,1fr] lg:items-start">
+                <div className="space-y-3 text-xs text-slate-200">
+                  <p className="text-sm font-semibold text-white">预览（小红书风格）</p>
+                  <p>顶部为合成封面，底部为笔记文案区，整体居中展现为分享态弹窗。</p>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-300">
+                    <span className="rounded-full bg-white/10 px-3 py-1">3:4 封面</span>
+                    <span className="rounded-full bg-white/10 px-3 py-1">图层可视化</span>
+                    <span className="rounded-full bg-white/10 px-3 py-1">文案排版</span>
+                  </div>
                 </div>
-              </div>
-              <div className="mx-auto w-full max-w-[460px] rounded-[32px] bg-[#f7f3ec] shadow-[0_25px_90px_rgba(0,0,0,0.32)] ring-1 ring-black/5">
-                <div className="overflow-hidden rounded-[28px] border border-black/5">
-                  <div
-                    className="relative w-full bg-slate-900"
-                    style={{ aspectRatio: previewRatio }}
-                  >
+                <div className="mx-auto w-full max-w-[460px] rounded-[32px] bg-[#f7f3ec] shadow-[0_25px_90px_rgba(0,0,0,0.32)] ring-1 ring-black/5">
+                  <div className="overflow-hidden rounded-[28px] border border-black/5">
                     <div
-                      className="absolute inset-0"
-                      style={{
-                        backgroundImage: `url(${bgUrl})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
-                    />
-                    {overlayOpacity > 0 && (
+                      className="relative w-full bg-slate-900"
+                      style={{ aspectRatio: previewRatio }}
+                    >
                       <div
-                        className="absolute inset-0 pointer-events-none"
+                        className="absolute inset-0"
                         style={{
-                          backgroundColor: "rgba(0,0,0,0.6)",
-                          opacity: overlayOpacity,
+                          backgroundImage: `url(${bgUrl})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
                         }}
                       />
-                    )}
-                    <div className="absolute inset-0">
-                      {layers.map((layer) =>
-                        layer.type === "text" ? (
-                          <TextLayerNode key={layer.id} layer={layer} readOnly />
-                        ) : (
-                          <div
-                            key={layer.id}
-                            className="absolute"
-                            style={{
-                              ...layer.style,
-                            }}
-                          >
-                            {layer.content}
-                          </div>
-                        )
+                      {overlayOpacity > 0 && (
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            backgroundColor: "rgba(0,0,0,0.6)",
+                            opacity: overlayOpacity,
+                          }}
+                        />
                       )}
-                    </div>
-                    <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
-                  </div>
-                  <div className="space-y-3 border-t border-black/5 bg-white/85 px-4 pb-4 pt-3 backdrop-blur">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-400 via-amber-200 to-orange-500 shadow-md ring-2 ring-white" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-slate-900">RedNote Studio</p>
-                        <p className="text-[11px] text-slate-500">30 秒前 · 合成预览</p>
+                      <div className="absolute inset-0">
+                        {layers.map((layer) =>
+                          layer.type === "text" ? (
+                            <TextLayerNode key={layer.id} layer={layer} readOnly />
+                          ) : (
+                            <div
+                              key={layer.id}
+                              className="absolute"
+                              style={{
+                                ...layer.style,
+                              }}
+                            >
+                              {layer.content}
+                            </div>
+                          )
+                        )}
                       </div>
-                      <button className="rounded-full bg-[#ff2e63] px-4 py-1 text-xs font-semibold text-white shadow hover:shadow-md">
-                        关注
-                      </button>
+                      <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
                     </div>
-                    <div className="space-y-2 text-slate-900">
-                      <p className="text-base font-semibold leading-relaxed">
-                        {copyResult?.title ?? "等待生成的标题"}
-                      </p>
-                      <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
-                        {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
-                      </p>
-                      <div className="flex flex-wrap gap-2 text-[12px] text-slate-700">
-                        {(copyResult?.tags?.length ? copyResult.tags : ["#好物分享", "#氛围感", "#编辑预览"]).map(
-                          (tag) => (
+                    <div className="space-y-3 border-t border-black/5 bg-white/85 px-4 pb-4 pt-3 backdrop-blur">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-400 via-amber-200 to-orange-500 shadow-md ring-2 ring-white" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-slate-900">RedNote Studio</p>
+                          <p className="text-[11px] text-slate-500">30 秒前 · 合成预览</p>
+                        </div>
+                        <button className="rounded-full bg-[#ff2e63] px-4 py-1 text-xs font-semibold text-white shadow hover:shadow-md">
+                          关注
+                        </button>
+                      </div>
+                      <div className="space-y-2 text-slate-900">
+                        <p className="text-base font-semibold leading-relaxed">
+                          {copyResult?.title ?? "等待生成的标题"}
+                        </p>
+                        <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
+                          {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-[12px] text-slate-700">
+                          {(copyResult?.tags?.length
+                            ? copyResult.tags
+                            : ["#好物分享", "#氛围感", "#编辑预览"]).map((tag) => (
                             <span
                               key={tag}
                               className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
                             >
                               {tag}
                             </span>
-                          )
-                        )}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-[12px] text-slate-600">
-                      <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
-                        <span>❤</span>
-                        <span>3.2k</span>
-                      </button>
-                      <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
-                        <span>💬</span>
-                        <span>126</span>
-                      </button>
-                      <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
-                        <span>↗</span>
-                        <span>分享</span>
-                      </button>
-                      <span className="ml-auto rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white">
-                        {visualStrategy?.design_plan.tone ?? "未设定"}
-                      </span>
+                      <div className="flex items-center gap-4 text-[12px] text-slate-600">
+                        <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
+                          <span>❤</span>
+                          <span>3.2k</span>
+                        </button>
+                        <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
+                          <span>💬</span>
+                          <span>126</span>
+                        </button>
+                        <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
+                          <span>↗</span>
+                          <span>分享</span>
+                        </button>
+                        <span className="ml-auto rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white">
+                          {visualStrategy?.design_plan.tone ?? "未设定"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
