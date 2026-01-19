@@ -506,11 +506,12 @@ function CanvasPreview() {
                       const boxStyle = pickBoxStyle(layer.style);
                       return (
                         <Draggable
-                          key={`${layer.id}-${logicalWidth}-${logicalHeight}-${position.x}-${position.y}`}
+                          key={`${layer.id}-${logicalWidth}-${logicalHeight}`}
                           nodeRef={nodeRef}
-                          defaultPosition={position}
+                          position={position}
                           bounds="parent"
                           scale={canvasScale || 1}
+                          onDrag={(_, data) => handleDrag(layer.id, data)}
                           onStop={(_, data) => handleDrag(layer.id, data)}
                         >
                           <div
@@ -778,29 +779,29 @@ function TextLayerNode({
 
   const scale = canvasScale && canvasScale > 0 ? canvasScale : 1;
   const editingScale = 1 / scale;
-  const scaled = (value: number) => value * scale;
+  // 编辑弹窗需要抵消画布缩放，但保持自身尺寸不再跟随缩放
 
   const editorCardStyle: React.CSSProperties = {
     transform: `scale(${editingScale})`,
     transformOrigin: "top left",
-    minWidth: `${scaled(240)}px`,
-    width: `${scaled(280)}px`,
-    maxWidth: `${scaled(420)}px`,
-    padding: `${scaled(10)}px`,
-    gap: `${scaled(10)}px`,
+    minWidth: "260px",
+    width: "320px",
+    maxWidth: "460px",
+    padding: "14px",
+    gap: "12px",
   };
 
   const textareaStyle: React.CSSProperties = {
-    height: `${scaled(120)}px`,
+    height: "160px",
     width: "100%",
-    fontSize: `${scaled(13)}px`,
-    lineHeight: `${scaled(18)}px`,
-    padding: `${scaled(10)}px`,
+    fontSize: "14px",
+    lineHeight: "21px",
+    padding: "12px",
   };
 
   const actionRowStyle: React.CSSProperties = {
-    marginTop: `${scaled(10)}px`,
-    gap: `${scaled(8)}px`,
+    marginTop: "12px",
+    gap: "10px",
   };
 
   return (
@@ -826,7 +827,7 @@ function TextLayerNode({
             onChange={(e) => setDraft(e.target.value)}
             style={textareaStyle}
           />
-          <div className="flex text-xs text-slate-100" style={actionRowStyle}>
+          <div className="flex text-sm font-medium text-slate-100" style={actionRowStyle}>
             <button
               type="button"
               className="rounded-full bg-primary px-3 py-1 text-primary-foreground shadow"
