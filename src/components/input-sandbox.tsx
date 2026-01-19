@@ -182,6 +182,14 @@ export function InputSandbox() {
         <div>
           <h2 className="text-lg font-semibold leading-tight">输入区</h2>
         </div>
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          aria-label={collapsed ? "展开输入区" : "折叠输入区"}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-lg font-semibold text-foreground hover:bg-muted/70 transition"
+        >
+          ▼
+        </button>
       </div>
 
       {!collapsed && (
@@ -285,13 +293,6 @@ export function InputSandbox() {
           className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/60 transition disabled:cursor-not-allowed disabled:opacity-70"
         >
           重置
-        </button>
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/60 transition"
-        >
-          {collapsed ? "展开输入区" : "折叠输入区"}
         </button>
         {activeTab === "json" && (
           <button
