@@ -45,8 +45,10 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
    - **光影/氛围**：指定光线（如“柔和漫射光”、“高级轮廓光”）。
    - **构图/留白**：**必须**指定留白区域（如“顶部留白”、“右侧留白”），以便后续排版文字。
    - **风格修饰词**：加入高频触发词，如“大师级摄影”、“8k超高清”、“极细腻材质”、“小红书风格”、“ins风”。
-   - **禁忌:** **不要**在提示词里要求生成具体的文字（Text/Typography），因为我们将通过代码后期合成。
-   - **技巧:** 使用 "Clean background", "Negative space on the [left/right/top]", "Product photography", "Commercial lighting" 等词汇确保底图质量。
+   - **负向约束 (Negative Constraints)**：为了确保画面纯净，**必须**在生成的 `seedream_prompt_cn` 中显式包含以下概念的否定描述（或在 Prompt 后追加 --no 参数内容）："text, watermark, username, signature, logo, typography, words, low quality, cluttered"。
+   - **留白强制性 (White Space Enforcement)**：
+     - 若 `layout_elements` 规划文字在顶部，生图提示词必须包含 "Bottom composition, empty sky, clean top background"。
+     - 若文字在底部，必须包含 "Top composition, clean floor, minimalist background"。
 
 # 3. UI 排版规划 (Design Layout Elements)
 基于固定画布尺寸 **1080x1440 (3:4)**，为每一个 `selling_keywords` 和装饰元素设计具体的 CSS 样式参数。
@@ -56,12 +58,15 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
   - 专业/高级 -> "Noto Sans SC" (黑体) 或 "Noto Serif SC" (宋体)
   - 活泼 -> "Ma Shan Zheng" (书法) 或 "ZCOOL QingKe HuangYou" (黄油体)
 - **装饰元素**：根据 `tone` 添加 SVG 装饰（如：star, line, blob, circle, quote）。
+- **可读性保障 (Readability Logic)**：
+     - **智能遮罩**：如果底图 tone 为 "Rich/Detailed"（细节丰富），必须在文字 `style_config` 中开启 `"effect": "background_highlight"` (添加半透明高斯模糊黑/白底板) 或 `"effect": "soft_shadow"`。
+     - **对比度检查**：文字颜色必须满足 WCAG AA 标准。深色背景(#000-#777)强制使用浅色字(#FFF/米色)；浅色背景强制使用深色字。
 
 
 # Output Format (JSON Only)
 ```json
 {
-  "seedream_prompt_cn": "String (Seedream中文提示词)",
+  "seedream_prompt_cn": "软糯的云朵沙发，放置在米色调的极简客厅中，晨光从左侧窗户洒入，产生丁达尔效应，温暖治愈，画面底部留白，顶部留白用于排版，8k超高清，--no text watermark signature",
   "design_plan": {
     "canvas": { "width": 1080, "height": 1440 },
     "tone": "String",
@@ -81,6 +86,7 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
            "font_family": "String (From Strategy)",
            "font_size": "Number (px)",
            "font_weight": "String (normal/bold)",
+           "effect": "soft_shadow", // 触发了可读性保障
            "color": "#Hex",
            "opacity": 0.9,
            "position": {
@@ -106,10 +112,13 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
 }
 ```
 
-# Rules
-1. **位置避让**：如果提示词描述主体在画面下方，则文字坐标 `top` 应在 10%-40% 之间。
-2. **层级分明**：主标题字号必须大于副标题，强调色要用于价格或核心痛点。
-3. **色彩和谐**：文字颜色必须能从底图中清晰辨认（如：深色底配白字，浅色底配深字）。
+# Rules (Constraints Checklist)
+1. **绝对避让原则**：文字 `position` 区域与生图提示词中的 `Visual Focus` (视觉重心) 不得重叠。若图是居中构图，文字必须采用 "Split Layout" (上下布局)。
+2. **排版安全区 (Safe Zone)**：所有文字元素的 `top`, `left`, `right`, `bottom` 必须保留至少 **5% (或 60px)** 的边距，严禁贴边。
+3. **字数与换行**：
+   - 主标题 (`is_main_title: true`)：单行建议不超过 8-10 个中文字符。若超长，必须在 content 中插入 `\n` 换行。
+   - 副标题：字号不得超过主标题的 60%。
+4. **无中生有禁令**：生图提示词中严禁出现 "Title", "Label", "Poster" 等词汇，防止 AI 误解为要画海报而非画场景。
 
 # Data Input
 `

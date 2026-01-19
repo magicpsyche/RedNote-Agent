@@ -53,6 +53,25 @@ export function Workspace() {
   );
 }
 
+function normalizeLayer(layer: Layer): Layer {
+  const style = normalizeStyle(layer.style);
+  return { ...layer, style };
+}
+
+function normalizeStyle(style: TextLayer["style"]): TextLayer["style"] {
+  const next: Record<string, unknown> = { ...style };
+  if (typeof style.position === "object" && style.position) {
+    const pos = style.position as Record<string, string>;
+    if (pos.top) next.top = pos.top;
+    if (pos.left) next.left = pos.left;
+    if (pos.right) next.right = pos.right;
+    if (pos.bottom) next.bottom = pos.bottom;
+    delete next.position;
+  }
+  if (!next.position) next.position = "absolute";
+  return next as TextLayer["style"];
+}
+
 function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[] }) {
   const { copyResult } = useAppStore();
 
@@ -119,6 +138,10 @@ function CanvasPreview() {
     : "1080×1440";
 
   const layers = useMemo(() => layoutConfig?.layers ?? [], [layoutConfig]);
+  const normalizedLayers = useMemo(
+    () => layers.map((layer) => normalizeLayer(layer)),
+    [layers]
+  );
 
   const handleTextUpdate = (id: string, content: string) => {
     if (!layoutConfig) return;
@@ -159,11 +182,12 @@ function CanvasPreview() {
     const rect = canvasRef.current.getBoundingClientRect();
     return Object.fromEntries(
       layers.map((layer) => {
-        const top = parseFloat(String(layer.style.top ?? "0"));
-        const left = parseFloat(String(layer.style.left ?? "0"));
+        const style = normalizeStyle(layer.style);
+        const top = parseFloat(String(style.top ?? "0"));
+        const left = parseFloat(String(style.left ?? "0"));
         const isPercent =
-          String(layer.style.top ?? "").includes("%") ||
-          String(layer.style.left ?? "").includes("%");
+          String(style.top ?? "").includes("%") ||
+          String(style.left ?? "").includes("%");
         if (isPercent) {
           return [
             layer.id,
@@ -292,7 +316,7 @@ function CanvasPreview() {
             />
           )}
           <div className="absolute inset-0">
-            {layers.map((layer) =>
+            {normalizedLayers.map((layer) =>
               layer.type === "text" ? (
                 <div key={layer.id} className="absolute">
                   <Draggable
