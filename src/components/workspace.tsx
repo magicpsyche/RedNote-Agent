@@ -126,7 +126,6 @@ function CanvasPreview() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [exportQuality, setExportQuality] = useState<"high" | "medium">("high");
   const dragRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
 
   const bgUrl = layoutConfig?.canvas?.backgroundImage ?? PLACEHOLDER_BG;
@@ -227,10 +226,9 @@ function CanvasPreview() {
     if (!canvasRef.current || !layoutConfig) return;
     setIsExporting(true);
     try {
-      const scale = exportQuality === "high" ? 1 : 0.85;
       const dataUrl = await toPng(canvasRef.current, {
-        width: Math.round(1080 * scale),
-        height: Math.round(1440 * scale),
+        width: 1080,
+        height: 1440,
         style: {
           width: `${1080}px`,
           height: `${1440}px`,
@@ -284,17 +282,6 @@ function CanvasPreview() {
         >
           {isExporting ? "导出中…" : "导出 1080×1440"}
         </button>
-        <label className="ml-2 inline-flex items-center gap-1">
-          <span>质量</span>
-          <select
-            value={exportQuality}
-            onChange={(e) => setExportQuality(e.target.value as "high" | "medium")}
-            className="h-8 rounded-md border border-border bg-background px-2 text-xs"
-          >
-            <option value="high">高</option>
-            <option value="medium">中</option>
-          </select>
-        </label>
       </div>
 
       <div className="relative isolate w-full overflow-hidden rounded-xl border border-border bg-gradient-to-b from-muted/40 to-background shadow-md">
