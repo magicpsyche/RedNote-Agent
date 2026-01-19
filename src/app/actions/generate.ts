@@ -167,11 +167,13 @@ async function generateCopy(
     return fallback;
   }
 
-  const systemPrompt = [
-    "你是一个拥有百万粉丝的小红书金牌种草博主，擅长用网感语言写爆款文案。",
-    "根据输入产品 JSON 生成包含标题/正文/标签/关键词的结构化结果，严格输出 JSON。",
-    "标题必须含 Emoji，正文需分段并包含目标人群痛点，避免绝对化用词。",
-  ].join("\n");
+  const systemPrompt =
+    (await loadPromptFromFile("prompt1.md")) ||
+    [
+      "你是一个拥有百万粉丝的小红书金牌种草博主，擅长用网感语言写爆款文案。",
+      "根据输入产品 JSON 生成包含标题/正文/标签/关键词的结构化结果，严格输出 JSON。",
+      "标题必须含 Emoji，正文需分段并包含目标人群痛点，避免绝对化用词。",
+    ].join("\n");
 
   const userPrompt = `Product_JSON: ${JSON.stringify(input)}`;
 
@@ -182,8 +184,10 @@ async function generateCopy(
       temperature: 0.8,
       llmConfig,
     });
-    const parsed = copyResultSchema.safeParse(JSON.parse(content));
+    const parsedJson = parseJsonLoose(content);
+    const parsed = copyResultSchema.safeParse(parsedJson);
     if (parsed.success) return parsed.data;
+    console.warn("[generateCopy] parse failed, content preview:", content.slice(0, 200));
   } catch (error) {
     console.error("[generateCopy] 使用 LLM 失败，fallback 占位", error);
   }
@@ -477,6 +481,20 @@ async function loadPromptFromFile(filename: string): Promise<string | null> {
     return content;
   } catch (error) {
     console.warn(`[loadPromptFromFile] 读取失败: ${filename}`, error);
+    return null;
+  }
+}
+
+function parseJsonLoose(content: string): unknown | null {
+  const trimmed = content.trim();
+  const fenceMatch = trimmed.match(/```(?:json)?\\s*([\\s\\S]*?)```/i);
+  const candidate = fenceMatch ? fenceMatch[1] : trimmed;
+  const braceMatch = candidate.match(/{[\\s\\S]*}/);
+  const jsonStr = braceMatch ? braceMatch[0] : candidate;
+  try {
+    return JSON.parse(jsonStr);
+  } catch {
+    console.warn("[parseJsonLoose] parse failed, preview:", jsonStr.slice(0, 200));
     return null;
   }
 }
