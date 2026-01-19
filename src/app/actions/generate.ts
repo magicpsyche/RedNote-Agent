@@ -1,7 +1,5 @@
 "use server";
 
-"use server";
-
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
@@ -112,23 +110,41 @@ const layoutSchema: z.ZodType<LayoutConfig> = z.object({
   ),
 });
 
+let prompt2Cache: string | null = null;
+
 export async function generateAll(rawInput: ProductInput): Promise<GenerateAllResult> {
   const input = productInputSchema.parse(rawInput);
 
   const llmConfig = getLLMConfig();
   const imageConfig = getImageConfig();
 
+  console.log("[generateAll] start", {
+    product_id: input.product_id,
+    llmBase: llmConfig.baseUrl,
+    imageBase: imageConfig.baseUrl,
+  });
+
   const copy = await generateCopy(input, llmConfig);
+  console.log("[generateAll] copy done", { title: copy.title });
   const visual = await generateVisualStrategy(copy, llmConfig);
+  console.log("[generateAll] visual done", {
+    promptPreview: visual.seedream_prompt_cn.slice(0, 40),
+  });
   const backgroundImage = await generateSeedreamImage(
     visual.seedream_prompt_cn,
     imageConfig
   );
+  console.log("[generateAll] image done", {
+    backgroundImage: backgroundImage.slice(0, 80),
+  });
   const layout = await generateLayoutConfig({
     copy,
     visual,
     backgroundImage,
     llmConfig,
+  });
+  console.log("[generateAll] layout done", {
+    layers: layout.layers.length,
   });
 
   return { copy, visual, layout };
@@ -178,16 +194,18 @@ async function generateVisualStrategy(
     return fallback;
   }
 
-  const systemPrompt = [
-    "你是小红书视觉设计总监，需输出 Seedream 中文生图提示词与排版设计蓝图。",
-    "结合 tone 映射色板与字体，返回 JSON，canvas 固定 1080x1440，使用百分比定位。",
-  ].join("\n");
+  const prompt2Content =
+    (await loadPromptFromFile("prompt2.md")) ||
+    [
+      "你是小红书视觉设计总监，需输出 Seedream 中文生图提示词与排版设计蓝图。",
+      "结合 tone 映射色板与字体，返回 JSON，canvas 固定 1080x1440，使用百分比定位。",
+    ].join("\n");
 
   const userPrompt = `copyResult: ${JSON.stringify(copy)}`;
 
   try {
     const content = await callChatCompletion({
-      systemPrompt,
+      systemPrompt: prompt2Content,
       userPrompt,
       temperature: 0.7,
       llmConfig,
@@ -439,6 +457,19 @@ function fetchWithTimeout(url: string, init: RequestInit, timeout = DEFAULT_TIME
     ...init,
     signal: controller.signal,
   }).finally(() => clearTimeout(timer));
+}
+
+async function loadPromptFromFile(filename: string): Promise<string | null> {
+  if (filename === "prompt2.md" && prompt2Cache) return prompt2Cache;
+  try {
+    const filePath = path.resolve(process.cwd(), filename);
+    const content = await fs.readFile(filePath, "utf-8");
+    if (filename === "prompt2.md") prompt2Cache = content;
+    return content;
+  } catch (error) {
+    console.warn(`[loadPromptFromFile] 读取失败: ${filename}`, error);
+    return null;
+  }
 }
 
 function createCopyPlaceholder(input: ProductInput): CopyResult {
