@@ -117,12 +117,6 @@ export function InputSandbox() {
     ]
   );
 
-  const simulate = useCallback(() => {
-    startTransition(() => {
-      void pushToStore(demoInput);
-    });
-  }, [pushToStore]);
-
   const handleSubmit = useCallback(
     (payload: ProductInput) => {
       startTransition(() => {
@@ -300,14 +294,6 @@ export function InputSandbox() {
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={simulate}
-          disabled={isDisabled}
-          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow hover:shadow-md transition disabled:cursor-not-allowed disabled:opacity-70"
-        >
-          ✨ 模拟 generateAll
-        </button>
         <button
           type="button"
           onClick={resetAll}
