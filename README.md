@@ -66,6 +66,9 @@ Preview：
   pnpm lint
   pnpm test
   ```
+- 访问方式：
+    本机：http://localhost:3000
+    局域网其他设备：http://<主机IP>:3000
 - 环境变量：`CUR_LLM`、`CUR_IMAGE`，以及对应的 API KEY、BASE URL 和 MODEL 配置。
 - 入口与目录：App Router 位于 `src/app/page.tsx`；核心逻辑 `src/app/actions/generate.ts`；组件在 `src/components/`；状态在 `src/store/`；工具在 `src/lib/`；Prompt 在根目录 `prompt1-3.md`。
 
