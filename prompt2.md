@@ -44,8 +44,8 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
    - **环境/场景**：根据 Tone 设定场景（如“温暖的午后卧室”、“极简的摄影棚”）。
    - **光影/氛围**：指定光线（如“柔和漫射光”、“高级轮廓光”）。
    - **构图/留白**：**必须**指定留白区域（如“顶部留白”、“右侧留白”），以便后续排版文字。
-   - **风格修饰词**：加入高频触发词，如“大师级摄影”、“8k超高清”、“极细腻材质”、“小红书风格”、“ins风”。
-   - **负向约束 (Negative Constraints)**：为了确保画面纯净，**必须**在生成的 `seedream_prompt_cn` 中显式包含以下概念的否定描述（或在 Prompt 后追加 --no 参数内容）："text, watermark, username, signature, logo, typography, words, low quality, cluttered"。
+   - **风格修饰词**：加入高频触发词，如“大师级摄影”、“8k超高清”、“极细腻材质”、“ins风”。
+   - **负向约束 (Negative Constraints)**：为了确保画面纯净，**必须**在生成的 `seedream_prompt_cn` 中显式包含以下概念的否定描述（或在 Prompt 后追加 --no 参数内容）："text, watermark, 小红书专业测评, signature, logo, typography, words, low quality, cluttered"。
    - **留白强制性 (White Space Enforcement)**：
      - 若 `layout_elements` 规划文字在顶部，生图提示词必须包含 "Bottom composition, empty sky, clean top background"。
      - 若文字在底部，必须包含 "Top composition, clean floor, minimalist background"。
@@ -66,7 +66,7 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
 # Output Format (JSON Only)
 ```json
 {
-  "seedream_prompt_cn": "软糯的云朵沙发，放置在米色调的极简客厅中，晨光从左侧窗户洒入，产生丁达尔效应，温暖治愈，画面底部留白，顶部留白用于排版，8k超高清，--no text watermark signature",
+  "seedream_prompt_cn": "软糯的云朵沙发，放置在米色调的极简客厅中，晨光从左侧窗户洒入，产生丁达尔效应，温暖治愈，画面底部留白，顶部留白用于排版，8k超高清，--no text，小红书专业测评，watermark，signature",
   "design_plan": {
     "canvas": { "width": 1080, "height": 1440 },
     "tone": "String",

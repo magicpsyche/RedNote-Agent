@@ -18,6 +18,7 @@ import {
   productInputSchema,
   toneOptions,
 } from "@/lib/validation";
+import { toProxyImageUrl } from "@/lib/image-proxy";
 
 const demoInput: ProductInput = {
   product_id: "P001",
@@ -42,6 +43,7 @@ export function InputSandbox() {
     setCopyResult,
     setVisualStrategy,
     setLayoutConfig,
+    setBackgroundImagePreview,
     setError,
     reset,
   } = useAppStore();
@@ -69,6 +71,7 @@ export function InputSandbox() {
       setCopyResult(null);
       setVisualStrategy(null);
       setLayoutConfig(null);
+      setBackgroundImagePreview(null);
       setStatus("GENERATING_COPY");
       try {
         const copy = await generateCopyAction(payload);
@@ -80,28 +83,38 @@ export function InputSandbox() {
         setStatus("GENERATING_IMAGE");
 
         const bgUrl = await generateSeedreamImageAction(visual.seedream_prompt_cn);
+        const safeBgUrl = toProxyImageUrl(bgUrl);
         setStatus("GENERATING_IMAGE"); // 生图完成后再确认一次状态
 
         // 先行更新画布背景，便于前端立即显示生图
+        setBackgroundImagePreview(safeBgUrl);
         setLayoutConfig((prev) => ({
           canvas: {
             width: visual.design_plan.canvas.width,
             height: visual.design_plan.canvas.height,
-            backgroundImage: bgUrl,
+            backgroundImage: safeBgUrl,
             tone: visual.design_plan.tone,
             overlayOpacity: visual.design_plan.canvas.overlayOpacity ?? 0.05,
           },
           layers: prev?.layers ?? [],
         }));
 
-        const layout = await generateLayoutConfigAction({ copy, visual, backgroundImage: bgUrl });
-        setLayoutConfig(layout);
+        const layout = await generateLayoutConfigAction({ copy, visual, backgroundImage: safeBgUrl });
+        setLayoutConfig({
+          ...layout,
+          canvas: {
+            ...layout.canvas,
+            backgroundImage: toProxyImageUrl(layout.canvas.backgroundImage),
+          },
+        });
+        setBackgroundImagePreview(null);
         setStatus("GENERATING_LAYOUT");
         setTimeout(() => setStatus("COMPLETED"), 150);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "生成失败，请检查输入或网络";
         setError(message);
+        setBackgroundImagePreview(null);
         setStatus("FAILED");
       }
       try {
@@ -113,7 +126,15 @@ export function InputSandbox() {
         console.warn("Persist input failed", err);
       }
     },
-    [setCopyResult, setError, setInput, setLayoutConfig, setStatus, setVisualStrategy]
+    [
+      setBackgroundImagePreview,
+      setCopyResult,
+      setError,
+      setInput,
+      setLayoutConfig,
+      setStatus,
+      setVisualStrategy,
+    ]
   );
 
   const handleSubmit = useCallback(

@@ -498,33 +498,34 @@ function CanvasPreview() {
                   layer.type === "text" ? (
                     (() => {
                       const nodeRef = getNodeRef(layer.id);
-                    const position =
-                      layerPositions[layer.id] ?? {
-                        x: parseFloat(String(layer.style.left ?? "0")) || 0,
-                        y: parseFloat(String(layer.style.top ?? "0")) || 0,
-                      };
-                    const boxStyle = pickBoxStyle(layer.style);
-                    return (
-                      <Draggable
-                        key={`${layer.id}-${logicalWidth}-${logicalHeight}-${position.x}-${position.y}`}
-                        nodeRef={nodeRef}
-                        defaultPosition={position}
-                        bounds="parent"
-                        scale={canvasScale || 1}
-                        onStop={(_, data) => handleDrag(layer.id, data)}
-                      >
-                        <div
-                          ref={nodeRef}
-                          style={{
-                            position: "absolute",
-                            zIndex: (layer.style as { zIndex?: number }).zIndex ?? 1,
-                            ...boxStyle,
-                          }}
+                      const position =
+                        layerPositions[layer.id] ?? {
+                          x: parseFloat(String(layer.style.left ?? "0")) || 0,
+                          y: parseFloat(String(layer.style.top ?? "0")) || 0,
+                        };
+                      const boxStyle = pickBoxStyle(layer.style);
+                      return (
+                        <Draggable
+                          key={`${layer.id}-${logicalWidth}-${logicalHeight}-${position.x}-${position.y}`}
+                          nodeRef={nodeRef}
+                          defaultPosition={position}
+                          bounds="parent"
+                          scale={canvasScale || 1}
+                          onStop={(_, data) => handleDrag(layer.id, data)}
                         >
-                          <TextLayerNode
-                            layer={layer}
-                            onChange={handleTextUpdate}
-                            onZIndexChange={adjustZIndex}
+                          <div
+                            ref={nodeRef}
+                            style={{
+                              position: "absolute",
+                              zIndex: (layer.style as { zIndex?: number }).zIndex ?? 1,
+                              ...boxStyle,
+                            }}
+                          >
+                            <TextLayerNode
+                              layer={layer}
+                              onChange={handleTextUpdate}
+                              onZIndexChange={adjustZIndex}
+                              canvasScale={canvasScale}
                               omitPosition
                             />
                           </div>
@@ -747,12 +748,14 @@ function TextLayerNode({
   readOnly,
   onZIndexChange,
   omitPosition,
+  canvasScale,
 }: {
   layer: TextLayer;
   onChange?: (id: string, content: string) => void;
   readOnly?: boolean;
   onZIndexChange?: (id: string, delta: number) => void;
   omitPosition?: boolean;
+  canvasScale?: number;
 }) {
   const [isEditing, setEditing] = useState(false);
   const [draft, setDraft] = useState(layer.content);
@@ -773,6 +776,33 @@ function TextLayerNode({
         position: "absolute",
       } as React.CSSProperties);
 
+  const scale = canvasScale && canvasScale > 0 ? canvasScale : 1;
+  const editingScale = 1 / scale;
+  const scaled = (value: number) => value * scale;
+
+  const editorCardStyle: React.CSSProperties = {
+    transform: `scale(${editingScale})`,
+    transformOrigin: "top left",
+    minWidth: `${scaled(240)}px`,
+    width: `${scaled(280)}px`,
+    maxWidth: `${scaled(420)}px`,
+    padding: `${scaled(10)}px`,
+    gap: `${scaled(10)}px`,
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    height: `${scaled(120)}px`,
+    width: "100%",
+    fontSize: `${scaled(13)}px`,
+    lineHeight: `${scaled(18)}px`,
+    padding: `${scaled(10)}px`,
+  };
+
+  const actionRowStyle: React.CSSProperties = {
+    marginTop: `${scaled(10)}px`,
+    gap: `${scaled(8)}px`,
+  };
+
   return (
     <div
       className="select-none"
@@ -786,13 +816,17 @@ function TextLayerNode({
       }}
     >
       {isEditing ? (
-        <div className="rounded-lg border border-border bg-slate-900/90 p-2 text-slate-50 shadow-lg">
+        <div
+          className="rounded-lg border border-border bg-slate-900/90 text-slate-50 shadow-lg"
+          style={editorCardStyle}
+        >
           <textarea
-            className="h-24 w-64 resize-none rounded-md border border-border/60 bg-slate-800 px-3 py-2 text-sm text-slate-50 shadow-inner"
+            className="resize-none rounded-md border border-border/60 bg-slate-800 text-slate-50 shadow-inner"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            style={textareaStyle}
           />
-          <div className="mt-2 flex gap-2 text-xs text-slate-100">
+          <div className="flex text-xs text-slate-100" style={actionRowStyle}>
             <button
               type="button"
               className="rounded-full bg-primary px-3 py-1 text-primary-foreground shadow"
