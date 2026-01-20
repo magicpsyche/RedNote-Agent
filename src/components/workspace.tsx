@@ -789,15 +789,15 @@ function CanvasPreview() {
 
       {isPreviewOpen && (
         <div className="fixed inset-0 z-40 overflow-auto bg-[#07060b]/80 backdrop-blur">
+          <button
+            className="absolute right-5 top-5 z-50 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
+            onClick={() => setPreviewOpen(false)}
+          >
+            关闭预览
+          </button>
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_24%,rgba(255,46,99,0.24),transparent_32%),radial-gradient(circle_at_80%_16%,rgba(255,238,229,0.16),transparent_38%),radial-gradient(circle_at_50%_80%,rgba(255,255,255,0.08),transparent_40%)]" />
           <div className="flex min-h-screen items-center justify-center px-4 py-10">
               <div className="relative w-full max-w-[420px]">
-              <button
-                className="absolute right-0 top-0 translate-y-[-140%] rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
-                onClick={() => setPreviewOpen(false)}
-              >
-                关闭预览
-              </button>
               <div className="relative mx-auto w-full">
                 <div className="relative rounded-[42px] bg-black p-3 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-white/15">
                   <div className="absolute inset-[10px] rounded-[34px] border border-white/8 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_36%)]" />
