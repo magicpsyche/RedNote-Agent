@@ -865,7 +865,7 @@ function CanvasPreview() {
               <div className="flex min-h-screen items-center justify-center px-4 py-10">
                 <div className="relative w-full max-w-[420px]">
                   <button
-                    className="absolute -right-16 top-4 z-50 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
+                    className="absolute -right-20 top-4 z-50 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
                     onClick={() => setPreviewOpen(false)}
                   >
                     关闭预览
@@ -893,9 +893,7 @@ function CanvasPreview() {
                               </button>
                               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#ff2e63] via-[#ffb88c] to-[#ffdcdc] shadow ring-2 ring-white" />
                               <div className="flex-1">
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {copyResult?.product_id || "RedNote Studio"}
-                                </p>
+                                <p className="text-sm font-semibold text-slate-900">RedNote-Agent</p>
                                 <p className="text-[11px] text-slate-500">小红书 · 合成预览</p>
                               </div>
                               <button className="rounded-full bg-[#ff2e63] px-4 py-2 text-[12px] font-semibold text-white shadow hover:shadow-md">
@@ -963,7 +961,7 @@ function CanvasPreview() {
                                             backgroundPosition: "center",
                                           }}
                                         >
-                                          {overlayOpacity > 0 && (
+                                          {index === 0 && overlayOpacity > 0 && (
                                             <div
                                               className="absolute inset-0 pointer-events-none"
                                               style={{
@@ -972,23 +970,25 @@ function CanvasPreview() {
                                               }}
                                             />
                                           )}
-                                          <div className="absolute inset-0">
-                                            {normalizedLayers.map((layer) =>
-                                              layer.type === "text" ? (
-                                                <TextLayerNode key={layer.id} layer={layer} readOnly />
-                                              ) : (
-                                                <div
-                                                  key={layer.id}
-                                                  className="absolute"
-                                                  style={{
-                                                    ...layer.style,
-                                                  }}
-                                                >
-                                                  {layer.content}
-                                                </div>
-                                              )
-                                            )}
-                                          </div>
+                                          {index === 0 && (
+                                            <div className="absolute inset-0">
+                                              {normalizedLayers.map((layer) =>
+                                                layer.type === "text" ? (
+                                                  <TextLayerNode key={layer.id} layer={layer} readOnly />
+                                                ) : (
+                                                  <div
+                                                    key={layer.id}
+                                                    className="absolute"
+                                                    style={{
+                                                      ...layer.style,
+                                                    }}
+                                                  >
+                                                    {layer.content}
+                                                  </div>
+                                                )
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     ))}
