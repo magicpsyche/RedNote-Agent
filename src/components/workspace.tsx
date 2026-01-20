@@ -93,8 +93,8 @@ export function Workspace() {
         }
         .workspace-glow-border {
           pointer-events: none;
-          padding: 2px;
-          border-radius: calc(var(--workspace-radius, 20px) + 6px);
+          padding: 3px;
+          border-radius: calc(var(--workspace-radius, 20px) + 8px);
           background: conic-gradient(
               from var(--orbit-angle, 0deg),
               color-mix(in srgb, var(--glow-color, #22d3ee) 98%, transparent) 12deg,
@@ -113,12 +113,12 @@ export function Workspace() {
             workspace-border-orbit 3.4s linear infinite,
             workspace-glow-breathe 2.1s ease-in-out infinite;
           box-shadow:
-            0 0 28px color-mix(in srgb, var(--glow-color, #22d3ee) 55%, transparent),
-            0 0 60px color-mix(in srgb, var(--glow-color, #22d3ee) 28%, transparent);
+            0 0 32px color-mix(in srgb, var(--glow-color, #22d3ee) 70%, transparent),
+            0 0 84px color-mix(in srgb, var(--glow-color, #22d3ee) 30%, transparent);
           mix-blend-mode: normal;
           isolation: isolate;
           position: absolute;
-          inset: -4px;
+          inset: -6px;
         }
         .workspace-glow-border::before,
         .workspace-glow-border::after {
@@ -137,7 +137,8 @@ export function Workspace() {
           opacity: 0.9;
           filter: blur(1.5px);
           mix-blend-mode: screen;
-          animation: workspace-border-orbit 2.4s linear infinite;
+          animation: workspace-border-orbit 2.2s linear infinite;
+          transform: rotate(var(--orbit-angle, 0deg));
         }
         .workspace-glow-border::after {
           background: conic-gradient(
@@ -147,9 +148,10 @@ export function Workspace() {
             transparent 220deg 360deg
           );
           filter: blur(10px);
-          opacity: 0.9;
+          opacity: 0.95;
           mix-blend-mode: screen;
-          animation: workspace-border-orbit 2.9s linear infinite;
+          animation: workspace-border-orbit 2.6s linear infinite;
+          transform: rotate(calc(var(--orbit-angle, 0deg) * -1));
         }
       `}</style>
     </section>
