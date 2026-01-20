@@ -99,6 +99,8 @@ export function InputSandbox() {
           layers: prev?.layers ?? [],
         }));
 
+        // 切换到排版阶段，避免状态栏停留在“生图”
+        setStatus("GENERATING_LAYOUT");
         const layout = await generateLayoutConfigAction({ copy, visual, backgroundImage: safeBgUrl });
         setLayoutConfig({
           ...layout,
@@ -108,7 +110,6 @@ export function InputSandbox() {
           },
         });
         setBackgroundImagePreview(null);
-        setStatus("GENERATING_LAYOUT");
         setTimeout(() => setStatus("COMPLETED"), 150);
       } catch (error) {
         const message =
