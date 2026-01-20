@@ -960,7 +960,7 @@ function CanvasPreview() {
                                 ›
                               </button>
                             </div>
-                            <div className="mt-3 flex items-center justify-center gap-2">
+                            <div className="mt-3 flex items-center justify-center gap-2 pb-[10px]">
                               {previewImages.map((_, index) => (
                                 <span
                                   key={index}
