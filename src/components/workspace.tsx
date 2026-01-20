@@ -982,7 +982,7 @@ function CanvasPreview() {
                             </p>
                           </div>
                           <div className="border-t border-slate-100 px-4 pb-4 pt-3">
-                            <div className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 text-[12px] text-slate-700 shadow-inner">
+                            <div className="flex items-center gap-2 text-[12px] text-slate-700">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-500 shadow-sm">
                                   <span className="text-slate-400">✐</span>
