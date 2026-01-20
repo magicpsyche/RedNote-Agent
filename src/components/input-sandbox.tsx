@@ -48,7 +48,7 @@ export function InputSandbox() {
     reset,
   } = useAppStore();
   const [isPending, startTransition] = useTransition();
-  const [activeTab, setActiveTab] = useState<"json" | "form">("json");
+  const [activeTab, setActiveTab] = useState<"json" | "form">("form");
   const [jsonValue, setJsonValue] = useState(
     JSON.stringify(demoInput, null, 2)
   );
@@ -167,11 +167,19 @@ export function InputSandbox() {
   const resetAll = useCallback(() => {
     setError(null);
     setJsonError(null);
-    const base = hydrated ? form.getValues() : demoInput;
-    setJsonValue(JSON.stringify(base, null, 2));
-    form.reset(base);
+    setCollapsed(false);
+    setJsonValue(JSON.stringify(demoInput, null, 2));
+    form.reset(demoInput);
     reset();
-  }, [form, reset, setError, hydrated]);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(STORAGE_JSON_KEY);
+      }
+    } catch (err) {
+      console.warn("Clear persisted input failed", err);
+    }
+  }, [form, reset, setCollapsed, setError]);
 
   useEffect(() => {
     if (status === "FAILED" && errorRef.current) {
