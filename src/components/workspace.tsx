@@ -804,7 +804,7 @@ function CanvasPreview() {
       </div>
 
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-40 bg-[#07060b]/85 bg-[radial-gradient(circle_at_16%_24%,rgba(255,46,99,0.2),transparent_32%),radial-gradient(circle_at_80%_16%,rgba(255,238,229,0.12),transparent_38%),radial-gradient(circle_at_50%_80%,rgba(255,255,255,0.08),transparent_40%)] backdrop-blur">
+        <div className="fixed inset-0 z-40 bg-[#07060b]/90 backdrop-blur">
           <button
             className="absolute right-5 top-5 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
             onClick={() => setPreviewOpen(false)}
