@@ -644,6 +644,19 @@ function CanvasPreview() {
   }, [activeSlide, previewImages.length]);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = isPreviewOpen ? "hidden" : prev || "";
+    return () => {
+      document.body.style.overflow = prev || "";
+    };
+  }, [isMounted, isPreviewOpen]);
+
+  useEffect(() => {
     if (!canvasShellRef.current) return;
     const updateSize = () => {
       const rect = canvasShellRef.current?.getBoundingClientRect();
@@ -655,10 +668,6 @@ function CanvasPreview() {
     observer.observe(canvasShellRef.current);
     return () => observer.disconnect();
   }, [logicalWidth, logicalHeight]);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!previewShellRef.current) return;
@@ -853,14 +862,14 @@ function CanvasPreview() {
       {isPreviewOpen && isMounted
         ? createPortal(
             <div className="fixed inset-0 z-40 overflow-y-auto bg-[#07060b]/90 backdrop-blur">
-              <button
-                className="absolute right-6 top-1/2 z-50 -translate-y-1/2 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
-                onClick={() => setPreviewOpen(false)}
-              >
-                关闭预览
-              </button>
               <div className="flex min-h-screen items-center justify-center px-4 py-10">
                 <div className="relative w-full max-w-[420px]">
+                  <button
+                    className="absolute -right-16 top-4 z-50 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
+                    onClick={() => setPreviewOpen(false)}
+                  >
+                    关闭预览
+                  </button>
                   <div className="relative rounded-[42px] bg-black p-3 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-white/15">
                     <div className="absolute inset-[10px] rounded-[34px] border border-white/8 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_36%)]" />
                     <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-b from-[#0c0b0f] via-[#0b0b0d] to-[#050506]">
