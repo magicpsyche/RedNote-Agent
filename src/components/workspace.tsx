@@ -210,10 +210,26 @@ function CanvasPreview() {
     setLayoutConfig(updated);
   };
 
-  const handleDrag = (id: string, data: { x: number; y: number }) => {
+  const handleDrag = (
+    id: string,
+    data: { x: number; y: number },
+    node?: HTMLDivElement | null
+  ) => {
     if (!layoutConfig || !logicalWidth || !logicalHeight) return;
-    const topPercent = (data.y / logicalHeight) * 100;
-    const leftPercent = (data.x / logicalWidth) * 100;
+    const scale = canvasScale || 1;
+    const rect = node?.getBoundingClientRect();
+    const layerWidth = rect ? rect.width / scale : 0;
+    const layerHeight = rect ? rect.height / scale : 0;
+    const clamp = (value: number, min: number, max: number) =>
+      Math.min(Math.max(value, min), max);
+
+    const maxX = logicalWidth - layerWidth > 0 ? logicalWidth - layerWidth : logicalWidth;
+    const maxY = logicalHeight - layerHeight > 0 ? logicalHeight - layerHeight : logicalHeight;
+    const clampedX = clamp(data.x, 0, maxX);
+    const clampedY = clamp(data.y, 0, maxY);
+
+    const topPercent = (clampedY / logicalHeight) * 100;
+    const leftPercent = (clampedX / logicalWidth) * 100;
 
     const updated: LayoutConfig = {
       ...layoutConfig,
@@ -509,10 +525,9 @@ function CanvasPreview() {
                           key={`${layer.id}-${logicalWidth}-${logicalHeight}`}
                           nodeRef={nodeRef}
                           position={position}
-                          bounds="parent"
                           scale={canvasScale || 1}
-                          onDrag={(_, data) => handleDrag(layer.id, data)}
-                          onStop={(_, data) => handleDrag(layer.id, data)}
+                          onDrag={(_, data) => handleDrag(layer.id, data, nodeRef.current)}
+                          onStop={(_, data) => handleDrag(layer.id, data, nodeRef.current)}
                         >
                           <div
                             ref={nodeRef}
