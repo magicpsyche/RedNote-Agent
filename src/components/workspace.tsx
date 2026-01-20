@@ -347,7 +347,10 @@ function CanvasPreview() {
   const [previewSize, setPreviewSize] = useState({ width: 0, height: 0 });
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
   const dragRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
+  const touchStartX = useRef(0);
+  const touchDeltaX = useRef(0);
 
   const bgUrl = layoutConfig?.canvas?.backgroundImage ?? backgroundImagePreview ?? PLACEHOLDER_BG;
   const overlayOpacity = layoutConfig?.canvas?.overlayOpacity ?? 0;
@@ -584,6 +587,19 @@ function CanvasPreview() {
     return Math.min(scale || 1, 1);
   }, [logicalHeight, logicalWidth, previewSize.height, previewSize.width]);
 
+  const previewImages = useMemo(() => {
+    const images = [bgUrl].filter(Boolean);
+    if (images.length < 2) images.push("https://placehold.co/2304x3072/png?text=Slide+2");
+    if (images.length < 3) images.push("https://placehold.co/2304x3072/png?text=Slide+3");
+    return images;
+  }, [bgUrl]);
+
+  useEffect(() => {
+    if (activeSlide > previewImages.length - 1) {
+      setActiveSlide(0);
+    }
+  }, [activeSlide, previewImages.length]);
+
   useEffect(() => {
     if (!canvasShellRef.current) return;
     const updateSize = () => {
@@ -816,7 +832,7 @@ function CanvasPreview() {
                           </div>
                         </div>
                         <div className="border-t border-slate-100 bg-white/98">
-                          <header className="flex items-center gap-3 px-5 pt-4">
+                          <header className="flex items-center gap-3 px-5 pt-4 pb-[10px]">
                             <button className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm">
                               ←
                             </button>
@@ -850,66 +866,106 @@ function CanvasPreview() {
                               </svg>
                             </button>
                           </header>
-                          <div className="px-5 pb-3">
-                            <div
-                              className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-inner"
-                              style={{ aspectRatio: previewRatio }}
-                            >
-                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(0,0,0,0.08),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(0,0,0,0.08),transparent_40%)]" />
+                          <div className="p-0">
+                            <div className="relative overflow-hidden bg-black" style={{ aspectRatio: previewRatio }}>
                               <div
                                 ref={previewShellRef}
-                                className="relative mx-auto h-full w-full"
-                                style={{ aspectRatio: `${logicalWidth} / ${logicalHeight}` }}
+                                className="absolute inset-0"
+                                onTouchStart={(e) => {
+                                  touchStartX.current = e.touches[0].clientX;
+                                  touchDeltaX.current = 0;
+                                }}
+                                onTouchMove={(e) => {
+                                  touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+                                }}
+                                onTouchEnd={() => {
+                                  if (touchDeltaX.current > 40) {
+                                    setActiveSlide((prev) =>
+                                      prev - 1 < 0 ? previewImages.length - 1 : prev - 1
+                                    );
+                                  } else if (touchDeltaX.current < -40) {
+                                    setActiveSlide((prev) => (prev + 1) % previewImages.length);
+                                  }
+                                  touchDeltaX.current = 0;
+                                  touchStartX.current = 0;
+                                }}
                               >
                                 <div
-                                  className="absolute inset-0"
-                                  style={{
-                                    width: `${logicalWidth}px`,
-                                    height: `${logicalHeight}px`,
-                                    transform: `scale(${previewScale})`,
-                                    transformOrigin: "top left",
-                                    backgroundImage: `url(${bgUrl})`,
-                                    backgroundSize: "cover",
-                                    backgroundPosition: "center",
-                                  }}
+                                  className="flex h-full w-full transition-transform duration-500 ease-out"
+                                  style={{ transform: `translateX(-${activeSlide * 100}%)` }}
                                 >
-                                  {overlayOpacity > 0 && (
-                                    <div
-                                      className="absolute inset-0 pointer-events-none"
-                                      style={{
-                                        backgroundColor: "rgba(0,0,0,0.6)",
-                                        opacity: overlayOpacity,
-                                      }}
-                                    />
-                                  )}
-                                  <div className="absolute inset-0">
-                                    {normalizedLayers.map((layer) =>
-                                      layer.type === "text" ? (
-                                        <TextLayerNode key={layer.id} layer={layer} readOnly />
-                                      ) : (
-                                        <div
-                                          key={layer.id}
-                                          className="absolute"
-                                          style={{
-                                            ...layer.style,
-                                          }}
-                                        >
-                                          {layer.content}
+                                  {previewImages.map((image, index) => (
+                                    <div key={index} className="relative h-full w-full shrink-0">
+                                      <div
+                                        className="absolute inset-0"
+                                        style={{
+                                          width: `${logicalWidth}px`,
+                                          height: `${logicalHeight}px`,
+                                          transform: `scale(${previewScale})`,
+                                          transformOrigin: "top left",
+                                          backgroundImage: `url(${image})`,
+                                          backgroundSize: "cover",
+                                          backgroundPosition: "center",
+                                        }}
+                                      >
+                                        {overlayOpacity > 0 && (
+                                          <div
+                                            className="absolute inset-0 pointer-events-none"
+                                            style={{
+                                              backgroundColor: "rgba(0,0,0,0.6)",
+                                              opacity: overlayOpacity,
+                                            }}
+                                          />
+                                        )}
+                                        <div className="absolute inset-0">
+                                          {normalizedLayers.map((layer) =>
+                                            layer.type === "text" ? (
+                                              <TextLayerNode key={layer.id} layer={layer} readOnly />
+                                            ) : (
+                                              <div
+                                                key={layer.id}
+                                                className="absolute"
+                                                style={{
+                                                  ...layer.style,
+                                                }}
+                                              >
+                                                {layer.content}
+                                              </div>
+                                            )
+                                          )}
                                         </div>
-                                      )
-                                    )}
-                                  </div>
-                                  <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
-                                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
+                              <button
+                                type="button"
+                                aria-label="上一张"
+                                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/35 px-2 py-2 text-white shadow hover:bg-black/55"
+                                onClick={() =>
+                                  setActiveSlide((prev) =>
+                                    prev - 1 < 0 ? previewImages.length - 1 : prev - 1
+                                  )
+                                }
+                              >
+                                ‹
+                              </button>
+                              <button
+                                type="button"
+                                aria-label="下一张"
+                                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/35 px-2 py-2 text-white shadow hover:bg-black/55"
+                                onClick={() => setActiveSlide((prev) => (prev + 1) % previewImages.length)}
+                              >
+                                ›
+                              </button>
                             </div>
                             <div className="mt-3 flex items-center justify-center gap-2">
-                              {Array.from({ length: 5 }).map((_, index) => (
+                              {previewImages.map((_, index) => (
                                 <span
                                   key={index}
                                   className={`h-2.5 w-2.5 rounded-full transition-all ${
-                                    index === 1
+                                    index === activeSlide
                                       ? "bg-[#ff2e63] shadow-[0_0_0_4px_rgba(255,46,99,0.12)]"
                                       : "bg-slate-300"
                                   }`}
@@ -927,21 +983,24 @@ function CanvasPreview() {
                           </div>
                           <div className="border-t border-slate-100 px-4 pb-4 pt-3">
                             <div className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 text-[12px] text-slate-700 shadow-inner">
-                              <span className="flex-1 text-slate-400">说点什么</span>
-                              <div className="flex items-center gap-3">
-                                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 shadow-sm">
-                                  <span className="text-[#ff2e63]">❤</span>
-                                  <span className="text-[12px] font-semibold text-slate-800">3.2k</span>
-                                </span>
-                                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 shadow-sm">
-                                  <span className="text-[#ffb02c]">★</span>
-                                  <span className="text-[12px] font-semibold text-slate-800">860</span>
-                                </span>
-                                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 shadow-sm">
-                                  <span className="text-[#3b5bdb]">✦</span>
-                                  <span className="text-[12px] font-semibold text-slate-800">214</span>
-                                </span>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-500 shadow-sm">
+                                  <span className="text-slate-400">✐</span>
+                                  <span className="text-[12px]">说点什么</span>
+                                </div>
                               </div>
+                              <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
+                                <span className="text-[#ff2e63]">❤</span>
+                                <span className="text-[12px] font-semibold text-slate-800">3.2k</span>
+                              </button>
+                              <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
+                                <span className="text-[#ffb02c]">★</span>
+                                <span className="text-[12px] font-semibold text-slate-800">860</span>
+                              </button>
+                              <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
+                                <span className="text-[#3b5bdb]">✦</span>
+                                <span className="text-[12px] font-semibold text-slate-800">214</span>
+                              </button>
                             </div>
                           </div>
                         </div>
