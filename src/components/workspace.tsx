@@ -281,14 +281,14 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
               persistCopyResult({ content: nextContent });
             }}
           />
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {tagDrafts.map((tag, index) => (
               <div
                 key={`${tag}-${index}`}
-                className="group flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1 shadow-sm"
+                className="group flex w-full items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1 shadow-sm"
               >
                 <input
-                  className="w-[110px] bg-transparent text-xs font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                  className="w-full bg-transparent text-xs font-medium text-foreground outline-none placeholder:text-muted-foreground"
                   value={tag}
                   onChange={(e) => handleTagChange(index, e.target.value)}
                   placeholder="#添加标签"
@@ -303,9 +303,9 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
                 </button>
               </div>
             ))}
-            <div className="flex items-center gap-2 rounded-full border border-dashed border-border px-3 py-1">
+            <div className="flex w-full items-center gap-2 rounded-full border border-dashed border-border px-3 py-1">
               <input
-                className="w-[120px] bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
                 placeholder="#新增标签"
                 value={newTagValue}
                 onChange={(e) => setNewTagValue(e.target.value)}
@@ -318,7 +318,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
               />
               <button
                 type="button"
-                className="text-[11px] font-semibold text-primary hover:underline"
+                className="shrink-0 whitespace-nowrap text-[11px] font-semibold text-primary hover:underline"
                 onClick={handleAddTag}
               >
                 添加
@@ -804,227 +804,224 @@ function CanvasPreview() {
       </div>
 
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-40 overflow-auto bg-[#07060b]/80 backdrop-blur">
+        <div className="fixed inset-0 z-40 bg-[#07060b]/85 bg-[radial-gradient(circle_at_16%_24%,rgba(255,46,99,0.2),transparent_32%),radial-gradient(circle_at_80%_16%,rgba(255,238,229,0.12),transparent_38%),radial-gradient(circle_at_50%_80%,rgba(255,255,255,0.08),transparent_40%)] backdrop-blur">
           <button
-            className="fixed right-5 top-5 z-50 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
+            className="absolute right-5 top-5 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
             onClick={() => setPreviewOpen(false)}
           >
             关闭预览
           </button>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_24%,rgba(255,46,99,0.24),transparent_32%),radial-gradient(circle_at_80%_16%,rgba(255,238,229,0.16),transparent_38%),radial-gradient(circle_at_50%_80%,rgba(255,255,255,0.08),transparent_40%)]" />
           <div className="flex min-h-screen items-center justify-center px-4 py-10">
-              <div className="relative w-full max-w-[420px]">
-              <div className="relative mx-auto w-full">
-                <div className="relative rounded-[42px] bg-black p-3 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-white/15">
-                  <div className="absolute inset-[10px] rounded-[34px] border border-white/8 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_36%)]" />
-                  <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-b from-[#0c0b0f] via-[#0b0b0d] to-[#050506]">
-                    <div
-                      className="mx-auto w-full rounded-[30px] border border-white/10 bg-white text-slate-900 shadow-[0_22px_70px_rgba(0,0,0,0.32)]"
-                      style={{ fontFamily: "'DM Sans', 'SF Pro Display', 'Helvetica Neue', sans-serif" }}
-                    >
-                      <div className="overflow-hidden rounded-[26px]">
-                        <div className="flex items-center justify-between px-6 py-3 text-[11px] font-semibold tracking-tight text-slate-800">
-                          <span>09:41</span>
-                          <div className="flex items-center gap-1 text-[10px] font-bold">
-                            <span className="h-2 w-2 rounded-full bg-slate-900" />
-                            <span className="h-2 w-2 rounded-full bg-slate-900" />
-                            <span className="h-2.5 w-5 rounded-md bg-slate-900" />
-                          </div>
+            <div className="relative w-full max-w-[420px]">
+              <div className="relative rounded-[42px] bg-black p-3 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-white/15">
+                <div className="absolute inset-[10px] rounded-[34px] border border-white/8 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_36%)]" />
+                <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-b from-[#0c0b0f] via-[#0b0b0d] to-[#050506]">
+                  <div
+                    className="mx-auto w-full rounded-[30px] border border-white/10 bg-white text-slate-900 shadow-[0_22px_70px_rgba(0,0,0,0.32)]"
+                    style={{ fontFamily: "'DM Sans', 'SF Pro Display', 'Helvetica Neue', sans-serif" }}
+                  >
+                    <div className="overflow-hidden rounded-[26px]">
+                      <div className="flex items-center justify-between px-6 py-3 text-[11px] font-semibold tracking-tight text-slate-800">
+                        <span>09:41</span>
+                        <div className="flex items-center gap-1 text-[10px] font-bold">
+                          <span className="h-2 w-2 rounded-full bg-slate-900" />
+                          <span className="h-2 w-2 rounded-full bg-slate-900" />
+                          <span className="h-2.5 w-5 rounded-md bg-slate-900" />
                         </div>
-                        <div className="border-t border-slate-100 bg-white/98">
-                          <header className="flex items-center gap-3 px-5 pt-4 pb-[10px]">
-                            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm">
-                              ←
-                            </button>
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#ff2e63] via-[#ffb88c] to-[#ffdcdc] shadow ring-2 ring-white" />
-                            <div className="flex-1">
-                              <p className="text-sm font-semibold text-slate-900">
-                                {copyResult?.product_id || "RedNote Studio"}
-                              </p>
-                              <p className="text-[11px] text-slate-500">小红书 · 合成预览</p>
-                            </div>
-                            <button className="rounded-full bg-[#ff2e63] px-4 py-2 text-[12px] font-semibold text-white shadow hover:shadow-md">
-                              关注
-                            </button>
-                            <button
-                              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300"
-                              aria-label="分享"
+                      </div>
+                      <div className="border-t border-slate-100 bg-white/98">
+                        <header className="flex items-center gap-3 px-5 pt-4 pb-[10px]">
+                          <button className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm">
+                            ←
+                          </button>
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#ff2e63] via-[#ffb88c] to-[#ffdcdc] shadow ring-2 ring-white" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {copyResult?.product_id || "RedNote Studio"}
+                            </p>
+                            <p className="text-[11px] text-slate-500">小红书 · 合成预览</p>
+                          </div>
+                          <button className="rounded-full bg-[#ff2e63] px-4 py-2 text-[12px] font-semibold text-white shadow hover:shadow-md">
+                            关注
+                          </button>
+                          <button
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300"
+                            aria-label="分享"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              className="h-5 w-5"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                className="h-5 w-5"
-                              >
-                                <path d="M8.75 12c0-1.794 0-2.69.556-3.245C9.861 8.2 10.758 8.2 12.55 8.2h.15a.1.1 0 0 0 .1-.1V5.75a.75.75 0 0 1 1.22-.567l5.75 4.55a.75.75 0 0 1 0 1.174l-5.75 4.55a.75.75 0 0 1-1.22-.567V13.9a.1.1 0 0 0-.1-.1h-.15c-1.792 0-2.69 0-3.244-.555C8.75 12.69 8.75 11.794 8.75 10z" />
-                                <path
-                                  d="M5.5 6.75a1.25 1.25 0 0 0-1.25 1.25v8a1.25 1.25 0 0 0 1.25 1.25H10"
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                            </button>
-                          </header>
-                          <div className="p-0">
-                            <div className="relative overflow-hidden bg-black" style={{ aspectRatio: previewRatio }}>
-                              <div
-                                ref={previewShellRef}
-                                className="absolute inset-0"
-                                onTouchStart={(e) => {
-                                  touchStartX.current = e.touches[0].clientX;
-                                  touchDeltaX.current = 0;
-                                }}
-                                onTouchMove={(e) => {
-                                  touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
-                                }}
-                                onTouchEnd={() => {
-                                  if (touchDeltaX.current > 40) {
-                                    setActiveSlide((prev) =>
-                                      prev - 1 < 0 ? previewImages.length - 1 : prev - 1
-                                    );
-                                  } else if (touchDeltaX.current < -40) {
-                                    setActiveSlide((prev) => (prev + 1) % previewImages.length);
-                                  }
-                                  touchDeltaX.current = 0;
-                                  touchStartX.current = 0;
-                                }}
-                              >
-                                <div
-                                  className="flex h-full w-full transition-transform duration-500 ease-out"
-                                  style={{ transform: `translateX(-${activeSlide * 100}%)` }}
-                                >
-                                  {previewImages.map((image, index) => (
-                                    <div key={index} className="relative h-full w-full shrink-0">
-                                      <div
-                                        className="absolute inset-0"
-                                        style={{
-                                          width: `${logicalWidth}px`,
-                                          height: `${logicalHeight}px`,
-                                          transform: `scale(${previewScale})`,
-                                          transformOrigin: "top left",
-                                          backgroundImage: `url(${image})`,
-                                          backgroundSize: "cover",
-                                          backgroundPosition: "center",
-                                        }}
-                                      >
-                                        {overlayOpacity > 0 && (
-                                          <div
-                                            className="absolute inset-0 pointer-events-none"
-                                            style={{
-                                              backgroundColor: "rgba(0,0,0,0.6)",
-                                              opacity: overlayOpacity,
-                                            }}
-                                          />
-                                        )}
-                                        <div className="absolute inset-0">
-                                          {normalizedLayers.map((layer) =>
-                                            layer.type === "text" ? (
-                                              <TextLayerNode key={layer.id} layer={layer} readOnly />
-                                            ) : (
-                                              <div
-                                                key={layer.id}
-                                                className="absolute"
-                                                style={{
-                                                  ...layer.style,
-                                                }}
-                                              >
-                                                {layer.content}
-                                              </div>
-                                            )
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                aria-label="上一张"
-                                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/35 px-2 py-2 text-white shadow hover:bg-black/55"
-                                onClick={() =>
+                              <path d="M8.75 12c0-1.794 0-2.69.556-3.245C9.861 8.2 10.758 8.2 12.55 8.2h.15a.1.1 0 0 0 .1-.1V5.75a.75.75 0 0 1 1.22-.567l5.75 4.55a.75.75 0 0 1 0 1.174l-5.75 4.55a.75.75 0 0 1-1.22-.567V13.9a.1.1 0 0 0-.1-.1h-.15c-1.792 0-2.69 0-3.244-.555C8.75 12.69 8.75 11.794 8.75 10z" />
+                              <path
+                                d="M5.5 6.75a1.25 1.25 0 0 0-1.25 1.25v8a1.25 1.25 0 0 0 1.25 1.25H10"
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                          </button>
+                        </header>
+                        <div className="p-0">
+                          <div className="relative overflow-hidden bg-black" style={{ aspectRatio: previewRatio }}>
+                            <div
+                              ref={previewShellRef}
+                              className="absolute inset-0"
+                              onTouchStart={(e) => {
+                                touchStartX.current = e.touches[0].clientX;
+                                touchDeltaX.current = 0;
+                              }}
+                              onTouchMove={(e) => {
+                                touchDeltaX.current = e.touches[0].clientX - touchStartX.current;
+                              }}
+                              onTouchEnd={() => {
+                                if (touchDeltaX.current > 40) {
                                   setActiveSlide((prev) =>
                                     prev - 1 < 0 ? previewImages.length - 1 : prev - 1
-                                  )
+                                  );
+                                } else if (touchDeltaX.current < -40) {
+                                  setActiveSlide((prev) => (prev + 1) % previewImages.length);
                                 }
+                                touchDeltaX.current = 0;
+                                touchStartX.current = 0;
+                              }}
+                            >
+                              <div
+                                className="flex h-full w-full transition-transform duration-500 ease-out"
+                                style={{ transform: `translateX(-${activeSlide * 100}%)` }}
                               >
-                                ‹
-                              </button>
-                              <button
-                                type="button"
-                                aria-label="下一张"
-                                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/35 px-2 py-2 text-white shadow hover:bg-black/55"
-                                onClick={() => setActiveSlide((prev) => (prev + 1) % previewImages.length)}
-                              >
-                                ›
-                              </button>
-                            </div>
-                            <div className="mt-3 flex items-center justify-center gap-2 pb-[10px]">
-                              {previewImages.map((_, index) => (
-                                <span
-                                  key={index}
-                                  className={`h-2.5 w-2.5 rounded-full transition-all ${
-                                    index === activeSlide
-                                      ? "bg-[#ff2e63] shadow-[0_0_0_4px_rgba(255,46,99,0.12)]"
-                                      : "bg-slate-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                          <div className="space-y-2 px-5 pb-2">
-                            <p className="text-base font-semibold leading-relaxed text-slate-900">
-                              {copyResult?.title ?? "等待生成的标题"}
-                            </p>
-                            <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
-                              {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
-                            </p>
-                            <div className="flex flex-wrap gap-2 text-[12px] text-slate-700">
-                              {(copyResult?.tags?.length
-                                ? copyResult.tags
-                                : ["#好物分享", "#氛围感", "#编辑预览"]
-                              ).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
-                                >
-                                  {tag.startsWith("#") ? tag : `#${tag}`}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="border-t border-slate-100 px-4 pb-4 pt-3">
-                            <div className="flex items-center gap-2 text-[12px] text-slate-700">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-500 shadow-sm">
-                                  <span className="text-slate-400">✐</span>
-                                  <span className="text-[12px]">说点什么</span>
-                                </div>
+                                {previewImages.map((image, index) => (
+                                  <div key={index} className="relative h-full w-full shrink-0">
+                                    <div
+                                      className="absolute inset-0"
+                                      style={{
+                                        width: `${logicalWidth}px`,
+                                        height: `${logicalHeight}px`,
+                                        transform: `scale(${previewScale})`,
+                                        transformOrigin: "top left",
+                                        backgroundImage: `url(${image})`,
+                                        backgroundSize: "cover",
+                                        backgroundPosition: "center",
+                                      }}
+                                    >
+                                      {overlayOpacity > 0 && (
+                                        <div
+                                          className="absolute inset-0 pointer-events-none"
+                                          style={{
+                                            backgroundColor: "rgba(0,0,0,0.6)",
+                                            opacity: overlayOpacity,
+                                          }}
+                                        />
+                                      )}
+                                      <div className="absolute inset-0">
+                                        {normalizedLayers.map((layer) =>
+                                          layer.type === "text" ? (
+                                            <TextLayerNode key={layer.id} layer={layer} readOnly />
+                                          ) : (
+                                            <div
+                                              key={layer.id}
+                                              className="absolute"
+                                              style={{
+                                                ...layer.style,
+                                              }}
+                                            >
+                                              {layer.content}
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                              <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
-                                <span className="text-[#ff2e63]">❤</span>
-                                <span className="text-[12px] font-semibold text-slate-800">3.2k</span>
-                              </button>
-                              <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
-                                <span className="text-[#ffb02c]">★</span>
-                                <span className="text-[12px] font-semibold text-slate-800">860</span>
-                              </button>
-                              <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
-                                <span className="text-[#3b5bdb]">✦</span>
-                                <span className="text-[12px] font-semibold text-slate-800">214</span>
-                              </button>
                             </div>
+                            <button
+                              type="button"
+                              aria-label="上一张"
+                              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/35 px-2 py-2 text-white shadow hover:bg-black/55"
+                              onClick={() =>
+                                setActiveSlide((prev) =>
+                                  prev - 1 < 0 ? previewImages.length - 1 : prev - 1
+                                )
+                              }
+                            >
+                              ‹
+                            </button>
+                            <button
+                              type="button"
+                              aria-label="下一张"
+                              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/35 px-2 py-2 text-white shadow hover:bg-black/55"
+                              onClick={() => setActiveSlide((prev) => (prev + 1) % previewImages.length)}
+                            >
+                              ›
+                            </button>
+                          </div>
+                          <div className="mt-3 flex items-center justify-center gap-2 pb-[10px]">
+                            {previewImages.map((_, index) => (
+                              <span
+                                key={index}
+                                className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                  index === activeSlide
+                                    ? "bg-[#ff2e63] shadow-[0_0_0_4px_rgba(255,46,99,0.12)]"
+                                    : "bg-slate-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-2 px-5 pb-2">
+                          <p className="text-base font-semibold leading-relaxed text-slate-900">
+                            {copyResult?.title ?? "等待生成的标题"}
+                          </p>
+                          <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
+                            {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
+                          </p>
+                          <div className="flex flex-wrap gap-2 text-[12px] text-slate-700">
+                            {(copyResult?.tags?.length
+                              ? copyResult.tags
+                              : ["#好物分享", "#氛围感", "#编辑预览"]
+                            ).map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
+                              >
+                                {tag.startsWith("#") ? tag : `#${tag}`}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                          <div className="flex items-center gap-2 text-[12px] text-slate-700">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-500 shadow-sm">
+                                <span className="text-slate-400">✐</span>
+                                <span className="text-[12px]">说点什么</span>
+                              </div>
+                            </div>
+                            <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
+                              <span className="text-[#ff2e63]">❤</span>
+                              <span className="text-[12px] font-semibold text-slate-800">3.2k</span>
+                            </button>
+                            <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
+                              <span className="text-[#ffb02c]">★</span>
+                              <span className="text-[12px] font-semibold text-slate-800">860</span>
+                            </button>
+                            <button className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm hover:border-slate-300">
+                              <span className="text-[#3b5bdb]">✦</span>
+                              <span className="text-[12px] font-semibold text-slate-800">214</span>
+                            </button>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <style jsx global>{`
-                  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
-                `}</style>
               </div>
+              <style jsx global>{`
+                @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
+              `}</style>
             </div>
           </div>
         </div>
