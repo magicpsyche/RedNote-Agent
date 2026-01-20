@@ -11,6 +11,7 @@ import { useAppStore } from "@/store/use-app-store";
 import type { AppStatus, CopyResult, LayoutConfig, TextLayer } from "@/types/schema";
 
 const PLACEHOLDER_BG = "https://placehold.co/2304x3072/png?text=Awaiting%20cover";
+const PLACEHOLDER_COPY = "https://placehold.co/2304x3072/png?text=Awaiting%20copy";
 const glowColors: Record<AppStatus, string> = {
   IDLE: "#2dd4bf",
   GENERATING_COPY: "#f59e0b",
@@ -264,6 +265,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
   };
 
   const canCopy = Boolean((contentDraft || copyResult?.content || "").trim());
+  const awaitingCopy = !copyPresent && !titleDraft.trim() && !contentDraft.trim();
 
   return (
     <div className="rounded-xl border border-border/70 bg-background/60 p-4 shadow-inner">
@@ -301,7 +303,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
         </div>
       </div>
       <div className="mt-3 space-y-3">
-        <div className="space-y-3 rounded-lg border border-border/60 bg-card/80 p-3">
+        <div className="relative space-y-3 rounded-lg border border-border/60 bg-card/80 p-3 overflow-hidden">
           <input
             className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-semibold shadow-inner outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
             placeholder="输入/修改文案标题"
@@ -367,6 +369,20 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
               </button>
             </div>
           </div>
+          {awaitingCopy && (
+            <div className="absolute inset-0 z-10 rounded-lg overflow-hidden">
+              <div
+                className="relative h-full w-full bg-[#f5f5f5]"
+                style={{
+                  backgroundImage: `url(${PLACEHOLDER_COPY})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+                aria-label="Awaiting copywriting"
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
