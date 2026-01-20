@@ -97,11 +97,12 @@ export function Workspace() {
           border-radius: calc(var(--workspace-radius, 20px) + 6px);
           background: conic-gradient(
               from var(--orbit-angle, 0deg),
-              color-mix(in srgb, var(--glow-color, #22d3ee) 90%, transparent) 0deg,
-              color-mix(in srgb, var(--glow-color, #22d3ee) 48%, transparent) 120deg,
-              color-mix(in srgb, var(--glow-color, #22d3ee) 22%, transparent) 200deg,
-              color-mix(in srgb, var(--glow-color, #22d3ee) 90%, transparent) 320deg,
-              color-mix(in srgb, var(--glow-color, #22d3ee) 62%, transparent) 360deg
+              color-mix(in srgb, var(--glow-color, #22d3ee) 98%, transparent) 12deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 58%, transparent) 90deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 30%, transparent) 160deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 98%, transparent) 240deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 70%, transparent) 320deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 55%, transparent) 360deg
             ),
             radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--glow-color, #22d3ee) 28%, transparent) 0, transparent 38%),
             radial-gradient(circle at 80% 14%, color-mix(in srgb, var(--glow-color, #22d3ee) 24%, transparent) 0, transparent 34%);
@@ -109,9 +110,11 @@ export function Workspace() {
           mask-composite: exclude;
           -webkit-mask-composite: destination-out;
           animation:
-            workspace-border-orbit 5s linear infinite,
-            workspace-glow-breathe 2.4s ease-in-out infinite;
-          box-shadow: 0 0 35px color-mix(in srgb, var(--glow-color, #22d3ee) 40%, transparent);
+            workspace-border-orbit 3.4s linear infinite,
+            workspace-glow-breathe 2.1s ease-in-out infinite;
+          box-shadow:
+            0 0 28px color-mix(in srgb, var(--glow-color, #22d3ee) 55%, transparent),
+            0 0 60px color-mix(in srgb, var(--glow-color, #22d3ee) 28%, transparent);
           mix-blend-mode: normal;
           isolation: isolate;
           position: absolute;
@@ -128,23 +131,25 @@ export function Workspace() {
         .workspace-glow-border::before {
           background: repeating-conic-gradient(
             from 0deg,
-            color-mix(in srgb, var(--glow-color, #22d3ee) 80%, transparent) 0deg 12deg,
-            transparent 12deg 18deg
+            color-mix(in srgb, var(--glow-color, #22d3ee) 90%, transparent) 0deg 8deg,
+            transparent 8deg 14deg
           );
-          opacity: 0.7;
-          filter: blur(2px);
-          animation: workspace-border-orbit 2.6s linear infinite;
+          opacity: 0.9;
+          filter: blur(1.5px);
+          mix-blend-mode: screen;
+          animation: workspace-border-orbit 2.4s linear infinite;
         }
         .workspace-glow-border::after {
           background: conic-gradient(
             from calc(var(--orbit-angle, 0deg) * -1),
             transparent 0deg 140deg,
-            color-mix(in srgb, var(--glow-color, #22d3ee) 80%, transparent) 180deg 200deg,
+            color-mix(in srgb, var(--glow-color, #22d3ee) 90%, transparent) 180deg 210deg,
             transparent 220deg 360deg
           );
-          filter: blur(6px);
-          opacity: 0.85;
-          animation: workspace-border-orbit 3.6s linear infinite;
+          filter: blur(10px);
+          opacity: 0.9;
+          mix-blend-mode: screen;
+          animation: workspace-border-orbit 2.9s linear infinite;
         }
       `}</style>
     </section>
