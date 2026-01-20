@@ -852,7 +852,7 @@ function CanvasPreview() {
 
       {isPreviewOpen && isMounted
         ? createPortal(
-            <div className="fixed inset-0 z-40 bg-[#07060b]/90 backdrop-blur">
+            <div className="fixed inset-0 z-40 overflow-y-auto bg-[#07060b]/90 backdrop-blur">
               <button
                 className="absolute right-6 top-1/2 z-50 -translate-y-1/2 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
                 onClick={() => setPreviewOpen(false)}
