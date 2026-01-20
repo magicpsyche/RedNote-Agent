@@ -865,7 +865,7 @@ function CanvasPreview() {
               <div className="flex min-h-screen items-center justify-center px-4 py-10">
                 <div className="relative w-full max-w-[420px]">
                   <button
-                    className="absolute -right-20 top-4 z-50 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
+                    className="absolute -right-[calc(5rem+30px)] top-4 z-50 rounded-full bg-[#ff2e63] px-4 py-3 text-sm font-semibold text-white shadow-lg ring-2 ring-white/30 transition hover:scale-105 hover:shadow-xl"
                     onClick={() => setPreviewOpen(false)}
                   >
                     关闭预览
