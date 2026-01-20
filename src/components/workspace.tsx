@@ -96,13 +96,15 @@ export function Workspace() {
           padding: 2px;
           border-radius: calc(var(--workspace-radius, 20px) + 6px);
           background: conic-gradient(
-            from var(--orbit-angle, 0deg),
-            color-mix(in srgb, var(--glow-color, #22d3ee) 88%, transparent) 0deg,
-            color-mix(in srgb, var(--glow-color, #22d3ee) 32%, transparent) 120deg,
-            color-mix(in srgb, var(--glow-color, #22d3ee) 18%, transparent) 200deg,
-            color-mix(in srgb, var(--glow-color, #22d3ee) 88%, transparent) 320deg,
-            color-mix(in srgb, var(--glow-color, #22d3ee) 58%, transparent) 360deg
-          );
+              from var(--orbit-angle, 0deg),
+              color-mix(in srgb, var(--glow-color, #22d3ee) 90%, transparent) 0deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 48%, transparent) 120deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 22%, transparent) 200deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 90%, transparent) 320deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 62%, transparent) 360deg
+            ),
+            radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--glow-color, #22d3ee) 28%, transparent) 0, transparent 38%),
+            radial-gradient(circle at 80% 14%, color-mix(in srgb, var(--glow-color, #22d3ee) 24%, transparent) 0, transparent 34%);
           mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
           mask-composite: exclude;
           -webkit-mask-composite: destination-out;
@@ -112,6 +114,37 @@ export function Workspace() {
           box-shadow: 0 0 35px color-mix(in srgb, var(--glow-color, #22d3ee) 40%, transparent);
           mix-blend-mode: normal;
           isolation: isolate;
+          position: absolute;
+          inset: -4px;
+        }
+        .workspace-glow-border::before,
+        .workspace-glow-border::after {
+          content: "";
+          position: absolute;
+          inset: 2px;
+          border-radius: calc(var(--workspace-radius, 20px) + 2px);
+          pointer-events: none;
+        }
+        .workspace-glow-border::before {
+          background: repeating-conic-gradient(
+            from 0deg,
+            color-mix(in srgb, var(--glow-color, #22d3ee) 80%, transparent) 0deg 12deg,
+            transparent 12deg 18deg
+          );
+          opacity: 0.7;
+          filter: blur(2px);
+          animation: workspace-border-orbit 2.6s linear infinite;
+        }
+        .workspace-glow-border::after {
+          background: conic-gradient(
+            from calc(var(--orbit-angle, 0deg) * -1),
+            transparent 0deg 140deg,
+            color-mix(in srgb, var(--glow-color, #22d3ee) 80%, transparent) 180deg 200deg,
+            transparent 220deg 360deg
+          );
+          filter: blur(6px);
+          opacity: 0.85;
+          animation: workspace-border-orbit 3.6s linear infinite;
         }
       `}</style>
     </section>
