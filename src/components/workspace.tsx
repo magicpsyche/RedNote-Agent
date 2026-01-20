@@ -989,7 +989,7 @@ function CanvasPreview() {
                                   key={tag}
                                   className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
                                 >
-                                  {tag}
+                                  {tag.startsWith("#") ? tag : `#${tag}`}
                                 </span>
                               ))}
                             </div>
