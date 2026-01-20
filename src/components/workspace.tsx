@@ -980,6 +980,19 @@ function CanvasPreview() {
                             <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
                               {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
                             </p>
+                            <div className="flex flex-wrap gap-2 text-[12px] text-slate-700">
+                              {(copyResult?.tags?.length
+                                ? copyResult.tags
+                                : ["#好物分享", "#氛围感", "#编辑预览"]
+                              ).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                           <div className="border-t border-slate-100 px-4 pb-4 pt-3">
                             <div className="flex items-center gap-2 text-[12px] text-slate-700">
