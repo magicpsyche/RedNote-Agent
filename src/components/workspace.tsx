@@ -790,7 +790,7 @@ function CanvasPreview() {
       {isPreviewOpen && (
         <div className="fixed inset-0 z-40 overflow-auto bg-[#07060b]/80 backdrop-blur">
           <button
-            className="absolute right-5 top-5 z-50 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
+            className="fixed right-5 top-5 z-50 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
             onClick={() => setPreviewOpen(false)}
           >
             关闭预览
