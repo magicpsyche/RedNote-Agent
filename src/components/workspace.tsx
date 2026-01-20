@@ -5,48 +5,114 @@ import type { CSSProperties } from "react";
 import Draggable from "react-draggable";
 import { toPng } from "html-to-image";
 
+import { StatusBar } from "@/components/status-bar";
 import { useAppStore } from "@/store/use-app-store";
-import type { LayoutConfig, TextLayer } from "@/types/schema";
+import type { AppStatus, CopyResult, LayoutConfig, TextLayer } from "@/types/schema";
 
-const PLACEHOLDER_BG =
-  "https://placehold.co/2304x3072/png?text=%E7%AD%89%E5%BE%85%E5%B0%81%E9%9D%A2%E7%94%9F%E6%88%90";
+const PLACEHOLDER_BG = "https://placehold.co/2304x3072/png?text=Awaiting%20cover";
+const glowColors: Record<AppStatus, string> = {
+  IDLE: "#2dd4bf",
+  GENERATING_COPY: "#f59e0b",
+  GENERATING_STRATEGY: "#6366f1",
+  GENERATING_IMAGE: "#e879f9",
+  GENERATING_LAYOUT: "#22d3ee",
+  COMPLETED: "#10b981",
+  FAILED: "#ef4444",
+};
+const generatingStatuses: AppStatus[] = [
+  "GENERATING_COPY",
+  "GENERATING_STRATEGY",
+  "GENERATING_IMAGE",
+  "GENERATING_LAYOUT",
+];
 
 export function Workspace() {
-  const { copyResult, layoutConfig, status } = useAppStore();
+  const { copyResult, status } = useAppStore();
 
-  const tags = copyResult?.tags ?? [];
+  const tags = useMemo(() => copyResult?.tags ?? [], [copyResult?.tags]);
+  const isGenerating = generatingStatuses.includes(status as AppStatus);
+  const glowColor = glowColors[status as AppStatus] ?? "#22d3ee";
 
   return (
-    <section className="rounded-2xl border border-border/80 bg-card/70 p-5 shadow-sm backdrop-blur">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-primary">Workspace</p>
-          <h2 className="text-lg font-semibold leading-tight">
-            文案预览 + Canvas 编辑器
-          </h2>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full bg-muted px-3 py-1">
-            状态：{status}
-          </span>
-          <span className="rounded-full bg-muted px-3 py-1">
-            文案：{copyResult ? "已生成" : "待生成"}
-          </span>
-          <span className="rounded-full bg-muted px-3 py-1">
-            图层：{layoutConfig?.layers?.length ?? 0}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr,1.2fr]">
-        <CopyPanel copyPresent={Boolean(copyResult)} tags={tags} />
-        <CanvasPreview />
-      </div>
-      {status === "FAILED" && (
-        <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          生成失败：请检查输入或稍后重试。如需占位预览，可再次提交或使用模拟按钮。
-        </div>
+    <section
+      className="relative isolate"
+      style={
+        {
+          "--glow-color": glowColor,
+          "--workspace-radius": "20px",
+        } as CSSProperties
+      }
+    >
+      {isGenerating && (
+        <div
+          aria-hidden
+          className="workspace-glow-border pointer-events-none absolute -inset-[4px] z-30"
+          style={{ borderRadius: "var(--workspace-radius, 20px)" }}
+        />
       )}
+      <div
+        className="relative z-20 border border-border/80 bg-card/70 p-5 shadow-sm backdrop-blur"
+        style={{ borderRadius: "var(--workspace-radius, 20px)" }}
+      >
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold leading-tight">工作区</h2>
+          </div>
+          <div className="flex justify-end">
+            <StatusBar />
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[1fr,1.2fr]">
+          <CopyPanel copyPresent={Boolean(copyResult)} tags={tags} />
+          <CanvasPreview />
+        </div>
+        {status === "FAILED" && (
+          <div className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            生成失败：请检查输入或稍后重试。如需占位预览，可再次提交或使用模拟按钮。
+          </div>
+        )}
+      </div>
+      <style jsx global>{`
+        @keyframes workspace-glow-breathe {
+          0%,
+          100% {
+            opacity: 0.65;
+          }
+          50% {
+            opacity: 0.95;
+          }
+        }
+        @keyframes workspace-border-orbit {
+          from {
+            --orbit-angle: 0deg;
+          }
+          to {
+            --orbit-angle: 360deg;
+          }
+        }
+        .workspace-glow-border {
+          pointer-events: none;
+          border-radius: var(--workspace-radius, 20px);
+          border: 2px solid transparent;
+          border-image: conic-gradient(
+              from var(--orbit-angle, 0deg),
+              color-mix(in srgb, var(--glow-color, #22d3ee) 88%, transparent) 0deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 32%, transparent) 120deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 18%, transparent) 200deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 88%, transparent) 320deg,
+              color-mix(in srgb, var(--glow-color, #22d3ee) 58%, transparent) 360deg
+            )
+            1;
+          animation:
+            workspace-border-orbit 5s linear infinite,
+            workspace-glow-breathe 2.4s ease-in-out infinite;
+          background: transparent;
+          box-shadow: none;
+          mix-blend-mode: normal;
+          isolation: isolate;
+        }
+      `}</style>
     </section>
   );
 }
@@ -71,9 +137,23 @@ function normalizeStyle(style: TextLayer["style"]): TextLayer["style"] {
 }
 
 function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[] }) {
-  const { copyResult } = useAppStore();
+  const { copyResult, setCopyResult } = useAppStore();
+  const placeholderTags = useMemo(
+    () => (tags.length ? tags : ["#话题标签", "#小红书风格", "#等待生成"]),
+    [tags]
+  );
   const [copied, setCopied] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(copyResult?.title ?? "");
+  const [contentDraft, setContentDraft] = useState(copyResult?.content ?? "");
+  const [tagDrafts, setTagDrafts] = useState<string[]>(copyResult?.tags ?? placeholderTags);
+  const [newTagValue, setNewTagValue] = useState("");
   const copyResetRef = useRef<number>();
+
+  useEffect(() => {
+    setTitleDraft(copyResult?.title ?? "");
+    setContentDraft(copyResult?.content ?? "");
+    setTagDrafts(copyResult?.tags ?? placeholderTags);
+  }, [copyResult?.content, copyResult?.tags, copyResult?.title, placeholderTags]);
 
   useEffect(() => {
     return () => {
@@ -83,8 +163,20 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
     };
   }, []);
 
+  const persistCopyResult = (partial: Partial<CopyResult>) => {
+    const base: CopyResult = {
+      product_id: copyResult?.product_id ?? "manual-draft",
+      tone: copyResult?.tone ?? "",
+      title: copyResult?.title ?? titleDraft ?? "",
+      content: copyResult?.content ?? contentDraft ?? "",
+      tags: copyResult?.tags ?? tagDrafts ?? [],
+      selling_keywords: copyResult?.selling_keywords ?? [],
+    };
+    setCopyResult({ ...base, ...partial });
+  };
+
   const handleCopy = async () => {
-    const text = copyResult?.content;
+    const text = (contentDraft || copyResult?.content || "").trim();
     if (!text) return;
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
@@ -107,61 +199,132 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
     }
   };
 
+  const handleTagChange = (index: number, value: string) => {
+    const updated = [...tagDrafts];
+    updated[index] = value;
+    setTagDrafts(updated);
+    persistCopyResult({ tags: updated });
+  };
+
+  const handleRemoveTag = (index: number) => {
+    const updated = tagDrafts.filter((_, idx) => idx !== index);
+    setTagDrafts(updated);
+    persistCopyResult({ tags: updated });
+  };
+
+  const handleAddTag = () => {
+    const value = newTagValue.trim();
+    if (!value) return;
+    const updated = [...tagDrafts, value];
+    setTagDrafts(updated);
+    persistCopyResult({ tags: updated });
+    setNewTagValue("");
+  };
+
+  const canCopy = Boolean((contentDraft || copyResult?.content || "").trim());
+
   return (
     <div className="rounded-xl border border-border/70 bg-background/60 p-4 shadow-inner">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium">文案预览</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">文案编辑器</p>
         </div>
-        <span className="rounded-full bg-secondary px-3 py-1 text-[11px] text-secondary-foreground">
-          {copyResult?.product_id ?? "未生成"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-secondary px-3 py-1 text-[11px] text-secondary-foreground">
+            {copyResult?.product_id ?? "未生成"}
+          </span>
+          <button
+            type="button"
+            disabled={!canCopy}
+            onClick={() => void handleCopy()}
+            className={`group relative overflow-hidden rounded-full border border-border px-3 py-1 text-xs font-semibold transition-all duration-200 ${
+              copied
+                ? "bg-gradient-to-r from-emerald-500/80 to-teal-500/70 text-white shadow-[0_8px_30px_rgba(16,185,129,0.25)]"
+                : "text-foreground hover:bg-muted/60"
+            } disabled:opacity-50`}
+          >
+            <span
+              className={`absolute inset-0 scale-150 bg-white/20 blur-2xl transition-opacity duration-300 ${
+                copied ? "opacity-80" : "opacity-0"
+              }`}
+              aria-hidden
+            />
+            <span
+              className={`relative flex items-center gap-1 ${copied ? "animate-[pulse_0.9s_ease-out]" : ""}`}
+            >
+              <span className="h-2 w-2 rounded-full bg-current opacity-80 transition-transform duration-200 group-hover:scale-110" />
+              {copied ? "已复制" : "复制正文"}
+            </span>
+          </button>
+        </div>
       </div>
       <div className="mt-3 space-y-3">
-        <div className="rounded-lg border border-border/60 bg-card/80 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-lg font-semibold">
-              {copyResult?.title ?? "等待生成文案"}
-            </p>
-            <button
-              type="button"
-              disabled={!copyPresent}
-              onClick={() => void handleCopy()}
-              className={`group relative overflow-hidden rounded-full border border-border px-3 py-1 text-xs font-semibold transition-all duration-200 ${
-                copied
-                  ? "bg-gradient-to-r from-emerald-500/80 to-teal-500/70 text-white shadow-[0_8px_30px_rgba(16,185,129,0.25)]"
-                  : "text-foreground hover:bg-muted/60"
-              } disabled:opacity-50`}
-            >
-              <span
-                className={`absolute inset-0 scale-150 bg-white/20 blur-2xl transition-opacity duration-300 ${
-                  copied ? "opacity-80" : "opacity-0"
-                }`}
-                aria-hidden
-              />
-              <span
-                className={`relative flex items-center gap-1 ${copied ? "animate-[pulse_0.9s_ease-out]" : ""}`}
+        <div className="space-y-3 rounded-lg border border-border/60 bg-card/80 p-3">
+          <input
+            className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm font-semibold shadow-inner outline-none focus:border-primary focus:ring-2 focus:ring-primary/30"
+            placeholder="输入/修改文案标题"
+            value={titleDraft}
+            onChange={(e) => {
+              const nextTitle = e.target.value;
+              setTitleDraft(nextTitle);
+              persistCopyResult({ title: nextTitle });
+            }}
+          />
+          <textarea
+            rows={20}
+            className="w-full resize-none rounded-md border border-border/60 bg-background px-3 py-2 text-sm leading-6 text-muted-foreground shadow-inner outline-none focus:border-primary focus:text-foreground focus:ring-2 focus:ring-primary/30"
+            placeholder={copyPresent ? "微调生成的正文..." : "等待生成或手动输入文案..."}
+            value={contentDraft}
+            onChange={(e) => {
+              const nextContent = e.target.value;
+              setContentDraft(nextContent);
+              persistCopyResult({ content: nextContent });
+            }}
+          />
+          <div className="mt-2 flex flex-wrap gap-2">
+            {tagDrafts.map((tag, index) => (
+              <div
+                key={`${tag}-${index}`}
+                className="group flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1 shadow-sm"
               >
-                <span className="h-2 w-2 rounded-full bg-current opacity-80 transition-transform duration-200 group-hover:scale-110" />
-                {copied ? "已复制" : "复制正文"}
-              </span>
-            </button>
+                <input
+                  className="w-[110px] bg-transparent text-xs font-medium text-foreground outline-none placeholder:text-muted-foreground"
+                  value={tag}
+                  onChange={(e) => handleTagChange(index, e.target.value)}
+                  placeholder="#添加标签"
+                />
+                <button
+                  type="button"
+                  className="text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                  onClick={() => handleRemoveTag(index)}
+                  aria-label="删除标签"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 rounded-full border border-dashed border-border px-3 py-1">
+              <input
+                className="w-[120px] bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                placeholder="#新增标签"
+                value={newTagValue}
+                onChange={(e) => setNewTagValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="text-[11px] font-semibold text-primary hover:underline"
+                onClick={handleAddTag}
+              >
+                添加
+              </button>
+            </div>
           </div>
-          {copyResult?.content && (
-            <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-              {copyResult.content}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(tags.length ? tags : ["#话题标签", "#小红书风格", "#等待生成"]).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground"
-            >
-              {tag}
-            </span>
-          ))}
         </div>
       </div>
     </div>
@@ -456,28 +619,25 @@ function CanvasPreview() {
 
   return (
     <div className="rounded-xl border border-border/70 bg-background/60 p-4 shadow-inner">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium">Canvas 编辑器</p>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Canvas 编辑器</p>
+        <div className="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            className="rounded-full border border-border px-3 py-1 font-semibold hover:bg-muted/60"
+          >
+            预览
+          </button>
+          <button
+            type="button"
+            onClick={exportImage}
+            disabled={isExporting}
+            className="rounded-full bg-primary px-3 py-1 font-semibold text-primary-foreground shadow hover:shadow-md disabled:opacity-60"
+          >
+            {isExporting ? "导出中…" : "导出"}
+          </button>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2 pb-2 text-xs">
-        <button
-          type="button"
-          onClick={() => setPreviewOpen(true)}
-          className="rounded-full border border-border px-3 py-1 font-semibold hover:bg-muted/60"
-        >
-          预览
-        </button>
-        <button
-          type="button"
-          onClick={exportImage}
-          disabled={isExporting}
-          className="rounded-full bg-primary px-3 py-1 font-semibold text-primary-foreground shadow hover:shadow-md disabled:opacity-60"
-        >
-          {isExporting ? "导出中…" : "导出 1080×1440"}
-        </button>
       </div>
 
       <div className="relative isolate w-full overflow-hidden rounded-xl border border-border bg-gradient-to-b from-muted/40 to-background shadow-md">
@@ -628,127 +788,170 @@ function CanvasPreview() {
       </div>
 
       {isPreviewOpen && (
-        <div className="fixed inset-0 z-40 overflow-auto bg-black/55 backdrop-blur">
-          <div className="flex min-h-screen items-center justify-center px-4 py-8">
-            <div className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-border/70 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_38%),radial-gradient(circle_at_80%_0%,rgba(255,255,255,0.04),transparent_42%),rgba(13,13,15,0.92)] shadow-2xl">
+        <div className="fixed inset-0 z-40 overflow-auto bg-[#07060b]/80 backdrop-blur">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_24%,rgba(255,46,99,0.24),transparent_32%),radial-gradient(circle_at_80%_16%,rgba(255,238,229,0.16),transparent_38%),radial-gradient(circle_at_50%_80%,rgba(255,255,255,0.08),transparent_40%)]" />
+          <div className="flex min-h-screen items-center justify-center px-4 py-10">
+              <div className="relative w-full max-w-[420px]">
               <button
-                className="absolute right-4 top-4 rounded-full border border-border/60 bg-black/60 px-4 py-1 text-sm text-white backdrop-blur hover:bg-white/10"
+                className="absolute right-0 top-0 translate-y-[-140%] rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur hover:bg-white/20"
                 onClick={() => setPreviewOpen(false)}
               >
-                关闭
+                关闭预览
               </button>
-              <div className="grid gap-6 p-6 lg:grid-cols-[320px,1fr] lg:items-start">
-                <div className="space-y-3 text-xs text-slate-200">
-                  <p className="text-sm font-semibold text-white">预览（小红书风格）</p>
-                  <p>顶部为合成封面，底部为笔记文案区，整体居中展现为分享态弹窗。</p>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-300">
-                    <span className="rounded-full bg-white/10 px-3 py-1">3:4 封面</span>
-                    <span className="rounded-full bg-white/10 px-3 py-1">图层可视化</span>
-                    <span className="rounded-full bg-white/10 px-3 py-1">文案排版</span>
-                  </div>
-                </div>
-                <div className="mx-auto w-full max-w-[460px] rounded-[32px] bg-[#f7f3ec] shadow-[0_25px_90px_rgba(0,0,0,0.32)] ring-1 ring-black/5">
-                  <div className="overflow-hidden rounded-[28px] border border-black/5">
-                    <div className="relative w-full bg-slate-900" style={{ aspectRatio: previewRatio }}>
-                      <div
-                        ref={previewShellRef}
-                        className="relative mx-auto h-full w-full"
-                        style={{ aspectRatio: `${logicalWidth} / ${logicalHeight}` }}
-                      >
-                        <div
-                          className="absolute inset-0"
-                          style={{
-                            width: `${logicalWidth}px`,
-                            height: `${logicalHeight}px`,
-                            transform: `scale(${previewScale})`,
-                            transformOrigin: "top left",
-                            backgroundImage: `url(${bgUrl})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }}
-                        >
-                          {overlayOpacity > 0 && (
+              <div className="relative mx-auto w-full">
+                <div className="relative rounded-[42px] bg-black p-3 shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-white/15">
+                  <div className="absolute inset-[10px] rounded-[34px] border border-white/8 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.04),transparent_36%)]" />
+                  <div className="relative overflow-hidden rounded-[34px] bg-gradient-to-b from-[#0c0b0f] via-[#0b0b0d] to-[#050506]">
+                    <div
+                      className="mx-auto w-full rounded-[30px] border border-white/10 bg-white text-slate-900 shadow-[0_22px_70px_rgba(0,0,0,0.32)]"
+                      style={{ fontFamily: "'DM Sans', 'SF Pro Display', 'Helvetica Neue', sans-serif" }}
+                    >
+                      <div className="overflow-hidden rounded-[26px]">
+                        <div className="flex items-center justify-between px-6 py-3 text-[11px] font-semibold tracking-tight text-slate-800">
+                          <span>09:41</span>
+                          <div className="flex items-center gap-1 text-[10px] font-bold">
+                            <span className="h-2 w-2 rounded-full bg-slate-900" />
+                            <span className="h-2 w-2 rounded-full bg-slate-900" />
+                            <span className="h-2.5 w-5 rounded-md bg-slate-900" />
+                          </div>
+                        </div>
+                        <div className="border-t border-slate-100 bg-white/98">
+                          <header className="flex items-center gap-3 px-5 pt-4">
+                            <button className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-sm">
+                              ←
+                            </button>
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-[#ff2e63] via-[#ffb88c] to-[#ffdcdc] shadow ring-2 ring-white" />
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-slate-900">
+                                {copyResult?.product_id || "RedNote Studio"}
+                              </p>
+                              <p className="text-[11px] text-slate-500">小红书 · 合成预览</p>
+                            </div>
+                            <button className="rounded-full bg-[#ff2e63] px-4 py-2 text-[12px] font-semibold text-white shadow hover:shadow-md">
+                              关注
+                            </button>
+                            <button
+                              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800 shadow-sm hover:border-slate-300"
+                              aria-label="分享"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                className="h-5 w-5"
+                              >
+                                <path d="M8.75 12c0-1.794 0-2.69.556-3.245C9.861 8.2 10.758 8.2 12.55 8.2h.15a.1.1 0 0 0 .1-.1V5.75a.75.75 0 0 1 1.22-.567l5.75 4.55a.75.75 0 0 1 0 1.174l-5.75 4.55a.75.75 0 0 1-1.22-.567V13.9a.1.1 0 0 0-.1-.1h-.15c-1.792 0-2.69 0-3.244-.555C8.75 12.69 8.75 11.794 8.75 10z" />
+                                <path
+                                  d="M5.5 6.75a1.25 1.25 0 0 0-1.25 1.25v8a1.25 1.25 0 0 0 1.25 1.25H10"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                            </button>
+                          </header>
+                          <div className="px-5 pb-3">
                             <div
-                              className="absolute inset-0 pointer-events-none"
-                              style={{
-                                backgroundColor: "rgba(0,0,0,0.6)",
-                                opacity: overlayOpacity,
-                              }}
-                            />
-                          )}
-                          <div className="absolute inset-0">
-                            {normalizedLayers.map((layer) =>
-                              layer.type === "text" ? (
-                                <TextLayerNode key={layer.id} layer={layer} readOnly />
-                              ) : (
+                              className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-inner"
+                              style={{ aspectRatio: previewRatio }}
+                            >
+                              <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(0,0,0,0.08),transparent_34%),radial-gradient(circle_at_90%_10%,rgba(0,0,0,0.08),transparent_40%)]" />
+                              <div
+                                ref={previewShellRef}
+                                className="relative mx-auto h-full w-full"
+                                style={{ aspectRatio: `${logicalWidth} / ${logicalHeight}` }}
+                              >
                                 <div
-                                  key={layer.id}
-                                  className="absolute"
+                                  className="absolute inset-0"
                                   style={{
-                                    ...layer.style,
+                                    width: `${logicalWidth}px`,
+                                    height: `${logicalHeight}px`,
+                                    transform: `scale(${previewScale})`,
+                                    transformOrigin: "top left",
+                                    backgroundImage: `url(${bgUrl})`,
+                                    backgroundSize: "cover",
+                                    backgroundPosition: "center",
                                   }}
                                 >
-                                  {layer.content}
+                                  {overlayOpacity > 0 && (
+                                    <div
+                                      className="absolute inset-0 pointer-events-none"
+                                      style={{
+                                        backgroundColor: "rgba(0,0,0,0.6)",
+                                        opacity: overlayOpacity,
+                                      }}
+                                    />
+                                  )}
+                                  <div className="absolute inset-0">
+                                    {normalizedLayers.map((layer) =>
+                                      layer.type === "text" ? (
+                                        <TextLayerNode key={layer.id} layer={layer} readOnly />
+                                      ) : (
+                                        <div
+                                          key={layer.id}
+                                          className="absolute"
+                                          style={{
+                                            ...layer.style,
+                                          }}
+                                        >
+                                          {layer.content}
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                  <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
+                                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
                                 </div>
-                              )
-                            )}
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center justify-center gap-2">
+                              {Array.from({ length: 5 }).map((_, index) => (
+                                <span
+                                  key={index}
+                                  className={`h-2.5 w-2.5 rounded-full transition-all ${
+                                    index === 1
+                                      ? "bg-[#ff2e63] shadow-[0_0_0_4px_rgba(255,46,99,0.12)]"
+                                      : "bg-slate-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
                           </div>
-                          <div className="pointer-events-none absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-black/45 via-black/10 to-transparent" />
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+                          <div className="space-y-2 px-5 pb-2">
+                            <p className="text-base font-semibold leading-relaxed text-slate-900">
+                              {copyResult?.title ?? "等待生成的标题"}
+                            </p>
+                            <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
+                              {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
+                            </p>
+                          </div>
+                          <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                            <div className="flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 text-[12px] text-slate-700 shadow-inner">
+                              <span className="flex-1 text-slate-400">说点什么</span>
+                              <div className="flex items-center gap-3">
+                                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 shadow-sm">
+                                  <span className="text-[#ff2e63]">❤</span>
+                                  <span className="text-[12px] font-semibold text-slate-800">3.2k</span>
+                                </span>
+                                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 shadow-sm">
+                                  <span className="text-[#ffb02c]">★</span>
+                                  <span className="text-[12px] font-semibold text-slate-800">860</span>
+                                </span>
+                                <span className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1 shadow-sm">
+                                  <span className="text-[#3b5bdb]">✦</span>
+                                  <span className="text-[12px] font-semibold text-slate-800">214</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="space-y-3 border-t border-black/5 bg-white/85 px-4 pb-4 pt-3 backdrop-blur">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-400 via-amber-200 to-orange-500 shadow-md ring-2 ring-white" />
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-slate-900">RedNote Studio</p>
-                          <p className="text-[11px] text-slate-500">30 秒前 · 合成预览</p>
-                        </div>
-                        <button className="rounded-full bg-[#ff2e63] px-4 py-1 text-xs font-semibold text-white shadow hover:shadow-md">
-                          关注
-                        </button>
-                      </div>
-                      <div className="space-y-2 text-slate-900">
-                        <p className="text-base font-semibold leading-relaxed">
-                          {copyResult?.title ?? "等待生成的标题"}
-                        </p>
-                        <p className="whitespace-pre-line text-[13px] leading-6 text-slate-700">
-                          {copyResult?.content ?? "正文生成后展示，这里模拟小红书笔记的文案排版效果。"}
-                        </p>
-                        <div className="flex flex-wrap gap-2 text-[12px] text-slate-700">
-                          {(copyResult?.tags?.length
-                            ? copyResult.tags
-                            : ["#好物分享", "#氛围感", "#编辑预览"]).map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 text-[12px] text-slate-600">
-                        <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
-                          <span>❤</span>
-                          <span>3.2k</span>
-                        </button>
-                        <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
-                          <span>💬</span>
-                          <span>126</span>
-                        </button>
-                        <button className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 shadow-inner">
-                          <span>↗</span>
-                          <span>分享</span>
-                        </button>
-                        <span className="ml-auto rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white">
-                          {visualStrategy?.design_plan.tone ?? "未设定"}
-                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
+                <style jsx global>{`
+                  @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
+                `}</style>
               </div>
             </div>
           </div>
