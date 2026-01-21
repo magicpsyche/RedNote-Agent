@@ -487,6 +487,16 @@ function CanvasPreview() {
 
   const layerPositions = useMemo(() => {
     if (!logicalWidth || !logicalHeight) return {};
+
+    const toPixels = (value: unknown, base: number) => {
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      if (typeof value !== "string") return 0;
+      const numeric = parseFloat(value);
+      if (!Number.isFinite(numeric)) return 0;
+      if (value.trim().endsWith("%")) return (numeric / 100) * base;
+      return numeric;
+    };
+
     return Object.fromEntries(
       normalizedLayers.map((layer) => {
         const style = normalizeStyle(layer.style);
@@ -495,35 +505,22 @@ function CanvasPreview() {
         const hasRight = style.right !== undefined && style.right !== null;
         const hasBottom = style.bottom !== undefined && style.bottom !== null;
 
-        const leftRaw = parseFloat(String(style.left ?? "0"));
-        const topRaw = parseFloat(String(style.top ?? "0"));
-        const rightRaw = parseFloat(String(style.right ?? "0"));
-        const bottomRaw = parseFloat(String(style.bottom ?? "0"));
+        const widthPx = toPixels((style as CSSProperties).width, logicalWidth);
+        const heightPx = toPixels((style as CSSProperties).height, logicalHeight);
 
-        const topIsPercent = typeof style.top === "string" && String(style.top).includes("%");
-        const leftIsPercent = typeof style.left === "string" && String(style.left).includes("%");
-        const rightIsPercent = typeof style.right === "string" && String(style.right).includes("%");
-        const bottomIsPercent = typeof style.bottom === "string" && String(style.bottom).includes("%");
-
+        // 右/下定位时补偿元素自身宽高，避免初始渲染时偏移到画布外
         const x = hasLeft
-          ? leftIsPercent
-            ? (leftRaw / 100) * logicalWidth
-            : leftRaw
+          ? toPixels(style.left, logicalWidth)
           : hasRight
-            ? rightIsPercent
-              ? logicalWidth - (rightRaw / 100) * logicalWidth
-              : logicalWidth - rightRaw
+            ? logicalWidth - toPixels(style.right, logicalWidth) - widthPx
             : 0;
 
         const y = hasTop
-          ? topIsPercent
-            ? (topRaw / 100) * logicalHeight
-            : topRaw
+          ? toPixels(style.top, logicalHeight)
           : hasBottom
-            ? bottomIsPercent
-              ? logicalHeight - (bottomRaw / 100) * logicalHeight
-              : logicalHeight - bottomRaw
+            ? logicalHeight - toPixels(style.bottom, logicalHeight) - heightPx
             : 0;
+
         return [layer.id, { x, y }];
       })
     );
