@@ -438,6 +438,13 @@ function CanvasPreview() {
     setLayoutConfig(updated);
   };
 
+  const measureLayerRect = (node?: HTMLDivElement | null) => {
+    if (!node) return null;
+    const body = node.querySelector<HTMLElement>("[data-layer-body]");
+    const target = body ?? node;
+    return target.getBoundingClientRect();
+  };
+
   const handleDrag = (
     id: string,
     data: { x: number; y: number },
@@ -445,7 +452,7 @@ function CanvasPreview() {
   ) => {
     if (!layoutConfig || !logicalWidth || !logicalHeight) return;
     const scale = canvasScale || 1;
-    const rect = node?.getBoundingClientRect();
+    const rect = measureLayerRect(node);
     const layerWidth = rect ? rect.width / scale : 0;
     const layerHeight = rect ? rect.height / scale : 0;
     const clamp = (value: number, min: number, max: number) =>
@@ -810,13 +817,15 @@ function CanvasPreview() {
                               >
                                 ×
                               </button>
-                              <TextLayerNode
-                                layer={layer}
-                                onChange={handleTextUpdate}
-                                onZIndexChange={adjustZIndex}
-                                canvasScale={canvasScale}
-                                omitPosition
-                              />
+                              <div data-layer-body>
+                                <TextLayerNode
+                                  layer={layer}
+                                  onChange={handleTextUpdate}
+                                  onZIndexChange={adjustZIndex}
+                                  canvasScale={canvasScale}
+                                  omitPosition
+                                />
+                              </div>
                             </div>
                           </div>
                         </Draggable>
@@ -868,7 +877,7 @@ function CanvasPreview() {
                             >
                               ×
                             </button>
-                            <div dangerouslySetInnerHTML={{ __html: layer.content ?? "" }} />
+                            <div data-layer-body dangerouslySetInnerHTML={{ __html: layer.content ?? "" }} />
                           </div>
                         </Draggable>
                       );
