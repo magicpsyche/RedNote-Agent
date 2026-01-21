@@ -77,10 +77,10 @@ export function Workspace() {
         @keyframes workspace-glow-breathe {
           0%,
           100% {
-            opacity: 0.65;
+            opacity: 0.32;
           }
           50% {
-            opacity: 0.95;
+            opacity: 1;
           }
         }
         @keyframes workspace-border-orbit {
@@ -113,10 +113,12 @@ export function Workspace() {
             workspace-border-orbit 3.4s linear infinite,
             workspace-glow-breathe 2.1s ease-in-out infinite;
           box-shadow:
-            0 0 32px color-mix(in srgb, var(--glow-color, #22d3ee) 70%, transparent),
-            0 0 84px color-mix(in srgb, var(--glow-color, #22d3ee) 30%, transparent);
+            0 0 32px color-mix(in srgb, var(--glow-color, #22d3ee) 80%, transparent),
+            0 0 120px color-mix(in srgb, var(--glow-color, #22d3ee) 35%, transparent);
           mix-blend-mode: normal;
           isolation: isolate;
+          transform-origin: center;
+          will-change: opacity;
           position: absolute;
           inset: -6px;
         }

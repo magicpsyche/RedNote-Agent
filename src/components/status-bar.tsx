@@ -74,10 +74,10 @@ export function StatusBar() {
           0%,
           100% {
             transform: scale(0.9);
-            opacity: 0.7;
+            opacity: 0.45;
           }
           50% {
-            transform: scale(1.2);
+            transform: scale(1.35);
             opacity: 1;
           }
         }
