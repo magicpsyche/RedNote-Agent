@@ -70,7 +70,6 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
   "design_plan": {
     "canvas": { "width": 1080, "height": 1440 },
     "tone": "String",
-    "background_color_hex": "#String (当图片加载失败时的兜底色)",
     "color_palette": {
        "primary": "#Hex",
        "secondary": "#Hex",
@@ -83,17 +82,7 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
         "content": "String (关键词内容)",
         "is_main_title": Boolean, // 是否为主标题
         "style_config": {
-           "font_family": "String (From Strategy)",
-           "font_size": "Number (px)",
-           "font_weight": "String (normal/bold)",
-           "effect": "soft_shadow", // 触发了可读性保障
-           "color": "#Hex",
            "opacity": 0.9,
-           "position": {
-              "top": "Number%", // 使用百分比定位，适应性更强
-              "left": "Number%",
-              "align": "String (left/center/right)" 
-           },
            "effect": "String (none / shadow / stroke / background_highlight)"
         }
       }
@@ -103,9 +92,6 @@ SeaDream 4.5 偏好**自然流畅的中文描述**，而非零碎的英文标签
       {
         "type": "svg_icon",
         "shape": "String (star/sparkle/wave/underline/circle)",
-        "color": "#Hex",
-        "position": { "top": "Number%", "left": "Number%" },
-        "size": "Number (px)"
       }
     ]
   }
