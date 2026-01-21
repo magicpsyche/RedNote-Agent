@@ -8,7 +8,7 @@ import { toPng } from "html-to-image";
 
 import { StatusBar } from "@/components/status-bar";
 import { useAppStore } from "@/store/use-app-store";
-import type { AppStatus, CopyResult, LayoutConfig, ShapeLayer, TextLayer } from "@/types/schema";
+import type { AppStatus, CopyResult, Layer, LayoutConfig, ShapeLayer, TextLayer } from "@/types/schema";
 
 const PLACEHOLDER_BG = "https://placehold.co/2304x3072/png?text=Awaiting%20cover";
 const PLACEHOLDER_COPY = "https://placehold.co/2304x3072/png?text=Awaiting%20copy";
@@ -193,7 +193,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
   const [contentDraft, setContentDraft] = useState(copyResult?.content ?? "");
   const [tagDrafts, setTagDrafts] = useState<string[]>(copyResult?.tags ?? placeholderTags);
   const [newTagValue, setNewTagValue] = useState("");
-  const copyResetRef = useRef<number>();
+  const copyResetRef = useRef<number | null>(null);
 
   useEffect(() => {
     setTitleDraft(copyResult?.title ?? "");
@@ -203,7 +203,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
 
   useEffect(() => {
     return () => {
-      if (copyResetRef.current) {
+      if (copyResetRef.current !== null) {
         clearTimeout(copyResetRef.current);
       }
     };
@@ -239,7 +239,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
         document.body.removeChild(textarea);
       }
       setCopied(true);
-      if (copyResetRef.current) clearTimeout(copyResetRef.current);
+      if (copyResetRef.current !== null) clearTimeout(copyResetRef.current);
       copyResetRef.current = window.setTimeout(() => setCopied(false), 1400);
     } catch (error) {
       console.error("Copy failed", error);
@@ -410,7 +410,7 @@ function CanvasPreview() {
   const [isExporting, setIsExporting] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
-  const dragRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
+  const dragRefs = useRef<Record<string, { current: HTMLDivElement | null }>>({});
   const touchStartX = useRef(0);
   const touchDeltaX = useRef(0);
 
@@ -540,8 +540,8 @@ function CanvasPreview() {
               style: {
                 ...layer.style,
                 zIndex:
-                  (typeof (layer.style as { zIndex?: number }).zIndex === "number"
-                    ? (layer.style as { zIndex?: number }).zIndex
+                  (typeof ((layer.style as { zIndex?: number })?.zIndex) === "number"
+                    ? (layer.style as { zIndex?: number }).zIndex ?? 1
                     : 1) + delta,
               },
             }

@@ -30,6 +30,27 @@ const copyResultSchema = z.object({
   seedream_prompt_cn: z.string(),
 });
 
+const textLayerSchema = z.object({
+  id: z.string(),
+  type: z.literal("text"),
+  content: z.string(),
+  style: z.record(z.any()),
+});
+
+const shapeLayerSchema = z.object({
+  id: z.string(),
+  type: z.literal("shape"),
+  content: z.string().optional(),
+  style: z.record(z.any()),
+});
+
+const svgLayerSchema = z.object({
+  id: z.string(),
+  type: z.literal("svg"),
+  content: z.string().optional(),
+  style: z.record(z.any()),
+});
+
 const layoutSchema: z.ZodType<LayoutConfig> = z.object({
   canvas: z.object({
     width: z.number(),
@@ -38,14 +59,7 @@ const layoutSchema: z.ZodType<LayoutConfig> = z.object({
     tone: z.string(),
     overlayOpacity: z.number().optional(),
   }),
-  layers: z.array(
-    z.object({
-      id: z.string(),
-      type: z.union([z.literal("text"), z.literal("shape"), z.literal("svg")]),
-      content: z.string().optional(),
-      style: z.record(z.any()),
-    })
-  ),
+  layers: z.array(z.discriminatedUnion("type", [textLayerSchema, shapeLayerSchema, svgLayerSchema])),
 });
 
 const promptCache: Record<string, PromptPair> = {};
@@ -163,6 +177,7 @@ async function generateSeedreamImage(
     };
     const url = data.data?.[0]?.url;
     if (url) return url;
+    throw new Error("Seedream 返回空结果");
   } catch (error) {
     throw error instanceof Error
       ? error
@@ -255,7 +270,7 @@ async function callChatCompletion({
   if (!content) {
     throw new Error("LLM 返回空内容");
   }
-  return { content, raw: result.responseMessages };
+  return { content, raw: result };
 }
 
 function fetchWithTimeout(url: string, init: RequestInit, timeout = DEFAULT_TIMEOUT) {

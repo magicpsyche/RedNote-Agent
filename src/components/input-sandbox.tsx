@@ -37,6 +37,7 @@ export function InputSandbox() {
   const {
     status,
     error,
+    layoutConfig,
     setStatus,
     setInput,
     setCopyResult,
@@ -82,16 +83,16 @@ export function InputSandbox() {
 
         // 先行更新画布背景，便于前端立即显示生图
         setBackgroundImagePreview(safeBgUrl);
-        setLayoutConfig((prev) => ({
+        setLayoutConfig({
           canvas: {
-            width: prev?.canvas.width ?? 1080,
-            height: prev?.canvas.height ?? 1440,
+            width: layoutConfig?.canvas.width ?? 1080,
+            height: layoutConfig?.canvas.height ?? 1440,
             backgroundImage: safeBgUrl,
             tone: copy.tone,
-            overlayOpacity: prev?.canvas.overlayOpacity ?? 0.05,
+            overlayOpacity: layoutConfig?.canvas.overlayOpacity ?? 0.05,
           },
-          layers: prev?.layers ?? [],
-        }));
+          layers: layoutConfig?.layers ?? [],
+        });
 
         // 切换到排版阶段，避免状态栏停留在“生图”
         setStatus("GENERATING_LAYOUT");
@@ -128,6 +129,7 @@ export function InputSandbox() {
       setInput,
       setLayoutConfig,
       setStatus,
+      layoutConfig,
     ]
   );
 

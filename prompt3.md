@@ -38,7 +38,7 @@
    - **Font**: 'Ma Shan Zheng' or 'ZCOOL KuaiLe'.
    - **Colors**: 清新色系，高亮标签 (backgroundColor: "#FF4D4F")。
    - **Shapes**: 手写笔记风格，标签像贴纸。
-   - **Effect**: 强调真实感，文字可略微倾斜。
+   - **Effect**: 可微量旋转 (rotate: "-2deg")。
 
 5. **简约高级 (Minimalist/High-end)**
    - **Font**: 'Noto Serif SC'.
@@ -70,6 +70,14 @@
         *   `content`: 必须是**完整**的、包含 `xmlns="http://www.w3.org/2000/svg"` 属性的 `<svg>...</svg>` 标签字符串。禁止输出裸路径或简写。
         *   `style`: 必须指定具体的 `width` 和 `height`。
 
+4.  **Readability Assurance (可读性保障)**:
+    - **智能对比度**：检测底图在该区域的明暗。深色背景强制用浅色字(#FFF/米色)；浅色背景强制用深色字。
+    - **复杂背景处理**：如果判断底图背景杂乱（Rich/Detailed），**必须**参考`Style Logic`中的**Effect**，在 `style` 中直接添加以下属性以生成“半透明遮罩”：
+      - `backgroundColor`: "rgba(0, 0, 0, 0.4)" (深色遮罩) 或 "rgba(255, 255, 255, 0.6)" (浅色遮罩)
+      - `backdropFilter`: "blur(4px)"
+      - `padding`: "10px 20px" (确保文字不贴边)
+      - `borderRadius`: "8px"
+
 # Output Format (JSON Only)
 请仅输出纯 JSON 格式，格式如下：
 ```json
@@ -97,7 +105,9 @@
         "fontFamily": "ZCOOL QingKe HuangYou",
         "fontWeight": "900",
         "textShadow": "0 4px 10px rgba(0,0,0,0.5)",
-        "zIndex": 20
+        "zIndex": 20,
+        // 如果背景复杂，AI需自动在此添加 backgroundColor 和 backdropFilter
+        "textShadow": "0 4px 10px rgba(0,0,0,0.5)" 
       }
     },
     {

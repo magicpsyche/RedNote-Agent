@@ -91,7 +91,7 @@ export function deriveFromInput(input: ProductInput): {
         type: "text",
         content: copy.title,
         style: {
-          position: "absolute",
+          position: "absolute" as const,
           top: "10%",
           left: "0",
           width: "100%",
@@ -109,7 +109,7 @@ export function deriveFromInput(input: ProductInput): {
         type: "text" as const,
         content: keyword,
         style: {
-          position: "absolute",
+          position: "absolute" as const,
           top: `${26 + index * 12}%`,
           left: "6%",
           padding: "10px 16px",
