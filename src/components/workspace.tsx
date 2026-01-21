@@ -8,7 +8,7 @@ import { toPng } from "html-to-image";
 
 import { StatusBar } from "@/components/status-bar";
 import { useAppStore } from "@/store/use-app-store";
-import type { AppStatus, CopyResult, LayoutConfig, TextLayer } from "@/types/schema";
+import type { AppStatus, CopyResult, LayoutConfig, ShapeLayer, TextLayer } from "@/types/schema";
 
 const PLACEHOLDER_BG = "https://placehold.co/2304x3072/png?text=Awaiting%20cover";
 const PLACEHOLDER_COPY = "https://placehold.co/2304x3072/png?text=Awaiting%20copy";
@@ -40,14 +40,17 @@ export function Workspace() {
         {
           "--glow-color": glowColor,
           "--workspace-radius": "20px",
+          "--workspace-glow-gap": "2px",
         } as CSSProperties
       }
     >
       {isGenerating && (
         <div
           aria-hidden
-          className="workspace-glow-border pointer-events-none absolute -inset-[4px] z-30"
-          style={{ borderRadius: "var(--workspace-radius, 20px)" }}
+          className="workspace-glow-border pointer-events-none absolute z-30"
+          style={{
+            borderRadius: "calc(var(--workspace-radius, 20px) + var(--workspace-glow-gap, 2px))",
+          }}
         />
       )}
       <div
@@ -93,8 +96,8 @@ export function Workspace() {
         }
         .workspace-glow-border {
           pointer-events: none;
-          padding: 3px;
-          border-radius: calc(var(--workspace-radius, 20px) + 8px);
+          padding: calc(var(--workspace-glow-gap, 2px) + 1px);
+          border-radius: calc(var(--workspace-radius, 20px) + var(--workspace-glow-gap, 2px));
           background: conic-gradient(
               from var(--orbit-angle, 0deg),
               color-mix(in srgb, var(--glow-color, #22d3ee) 98%, transparent) 12deg,
@@ -120,14 +123,14 @@ export function Workspace() {
           transform-origin: center;
           will-change: opacity;
           position: absolute;
-          inset: -6px;
+          inset: calc(var(--workspace-glow-gap, 2px) * -1);
         }
         .workspace-glow-border::before,
         .workspace-glow-border::after {
           content: "";
           position: absolute;
-          inset: 2px;
-          border-radius: calc(var(--workspace-radius, 20px) + 2px);
+          inset: max(1px, var(--workspace-glow-gap, 2px));
+          border-radius: calc(var(--workspace-radius, 20px) + var(--workspace-glow-gap, 2px));
           pointer-events: none;
         }
         .workspace-glow-border::before {
@@ -448,10 +451,14 @@ function CanvasPreview() {
     const clamp = (value: number, min: number, max: number) =>
       Math.min(Math.max(value, min), max);
 
-    const maxX = logicalWidth - layerWidth > 0 ? logicalWidth - layerWidth : logicalWidth;
-    const maxY = logicalHeight - layerHeight > 0 ? logicalHeight - layerHeight : logicalHeight;
-    const clampedX = clamp(data.x, 0, maxX);
-    const clampedY = clamp(data.y, 0, maxY);
+    const maxX = logicalWidth - layerWidth > 0 ? logicalWidth - layerWidth : 0;
+    const maxY = logicalHeight - layerHeight > 0 ? logicalHeight - layerHeight : 0;
+    // 如果元素比画布更宽/高，允许出现负偏移，避免只能停在左/上侧
+    const minX = layerWidth > logicalWidth ? logicalWidth - layerWidth : 0;
+    const minY = layerHeight > logicalHeight ? logicalHeight - layerHeight : 0;
+
+    const clampedX = clamp(data.x, minX, maxX);
+    const clampedY = clamp(data.y, minY, maxY);
 
     const topPercent = (clampedY / logicalHeight) * 100;
     const leftPercent = (clampedX / logicalWidth) * 100;
@@ -474,7 +481,7 @@ function CanvasPreview() {
   const layerPositions = useMemo(() => {
     if (!logicalWidth || !logicalHeight) return {};
     return Object.fromEntries(
-      layers.map((layer) => {
+      normalizedLayers.map((layer) => {
         const style = normalizeStyle(layer.style);
         const hasLeft = style.left !== undefined && style.left !== null;
         const hasTop = style.top !== undefined && style.top !== null;
@@ -513,7 +520,7 @@ function CanvasPreview() {
         return [layer.id, { x, y }];
       })
     );
-  }, [layers, logicalWidth, logicalHeight]);
+  }, [logicalHeight, logicalWidth, normalizedLayers]);
 
   const adjustZIndex = (id: string, delta: number) => {
     if (!layoutConfig) return;
@@ -705,6 +712,11 @@ function CanvasPreview() {
     return dragRefs.current[id];
   };
 
+  const handleRemoveLayer = (id: string) => {
+    if (!layoutConfig) return;
+    setLayoutConfig({ ...layoutConfig, layers: layoutConfig.layers.filter((layer) => layer.id !== id) });
+  };
+
   return (
     <div className="rounded-xl border border-border/70 bg-background/60 p-4 shadow-inner">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -785,27 +797,82 @@ function CanvasPreview() {
                               ...boxStyle,
                             }}
                           >
-                            <TextLayerNode
-                              layer={layer}
-                              onChange={handleTextUpdate}
-                              onZIndexChange={adjustZIndex}
-                              canvasScale={canvasScale}
-                              omitPosition
-                            />
+                            <div className="group relative">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveLayer(layer.id);
+                                }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="absolute -right-4 -top-4 hidden h-8 w-8 items-center justify-center rounded-full bg-foreground text-background shadow-lg ring-2 ring-background transition hover:scale-105 group-hover:flex"
+                                aria-label="删除图层"
+                              >
+                                ×
+                              </button>
+                              <TextLayerNode
+                                layer={layer}
+                                onChange={handleTextUpdate}
+                                onZIndexChange={adjustZIndex}
+                                canvasScale={canvasScale}
+                                omitPosition
+                              />
+                            </div>
                           </div>
                         </Draggable>
                       );
                     })()
                   ) : (
-                    <div
-                      key={layer.id}
-                      className="absolute"
-                      style={{
-                        ...layer.style,
-                      }}
-                    >
-                      {layer.content}
-                    </div>
+                    (() => {
+                      const nodeRef = getNodeRef(layer.id);
+                      const position =
+                        layerPositions[layer.id] ?? {
+                          x: parseFloat(String(layer.style.left ?? "0")) || 0,
+                          y: parseFloat(String(layer.style.top ?? "0")) || 0,
+                        };
+                      const boxStyle = pickBoxStyle(layer.style);
+                      const visualStyle = Object.fromEntries(
+                        Object.entries(layer.style as Record<string, unknown>).filter(
+                          ([key]) => !["top", "left", "right", "bottom", "position"].includes(key)
+                        )
+                      ) as CSSProperties;
+                      return (
+                        <Draggable
+                          key={`${layer.id}-${logicalWidth}-${logicalHeight}`}
+                          nodeRef={nodeRef}
+                          position={position}
+                          scale={canvasScale || 1}
+                          onDrag={(_, data) => handleDrag(layer.id, data, nodeRef.current)}
+                          onStop={(_, data) => handleDrag(layer.id, data, nodeRef.current)}
+                        >
+                          <div
+                            ref={nodeRef}
+                            className="group absolute"
+                            style={{
+                              position: "absolute",
+                              cursor: "grab",
+                              zIndex: (layer.style as { zIndex?: number }).zIndex ?? 1,
+                              ...boxStyle,
+                              ...visualStyle,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveLayer(layer.id);
+                              }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="absolute -right-4 -top-4 hidden h-8 w-8 items-center justify-center rounded-full bg-foreground text-background shadow-lg ring-2 ring-background transition hover:scale-105 group-hover:flex"
+                              aria-label="删除图层"
+                            >
+                              ×
+                            </button>
+                            <div dangerouslySetInnerHTML={{ __html: layer.content ?? "" }} />
+                          </div>
+                        </Draggable>
+                      );
+                    })()
                   )
                 )}
               </div>
@@ -866,9 +933,8 @@ function CanvasPreview() {
                   style={{
                     ...layer.style,
                   }}
-                >
-                  {layer.content}
-                </div>
+                  dangerouslySetInnerHTML={{ __html: layer.content ?? "" }}
+                />
               )
             )}
           </div>
@@ -998,9 +1064,8 @@ function CanvasPreview() {
                                                     style={{
                                                       ...layer.style,
                                                     }}
-                                                  >
-                                                    {layer.content}
-                                                  </div>
+                                                    dangerouslySetInnerHTML={{ __html: layer.content ?? "" }}
+                                                  />
                                                 )
                                               )}
                                             </div>

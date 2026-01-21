@@ -47,15 +47,31 @@
    - **Effect**: 宽字间距 (letterSpacing: "3px")，强烈的黑白对比，无杂乱装饰。
 
 # Technical Constraints (CRITICAL)
+
 基于固定画布尺寸 **1080x1440 (3:4)**，为每一个 `selling_keywords` 和装饰元素设计具体的 CSS 样式参数。
-- **布局逻辑**：文字位置必须与生图指令中的“留白区”对应（例如：图的主体在下，字就在上）。
-- **No Transform for Positioning**: 禁止在 style 中使用 'transform' 来居中（如 translate(-50%)），因为这会破坏前端的拖拽逻辑。
-   - **居中方案**: 若需水平居中，请设置 "left": "0", "width": "100%", "textAlign": "center"。
-- **装饰元素**：根据 `tone` 添加 SVG 装饰（如：star, line, blob, circle, quote）。
-- **可读性保障 (Readability Logic)**：
-     - **对比度检查**：文字颜色必须满足 WCAG AA 标准。深色背景(#000-#777)强制使用浅色字(#FFF/米色)；浅色背景强制使用深色字。
+
+1.  **布局逻辑**：
+    *   文字位置必须与生图指令中的“留白区”对应（例如：图的主体在下，字就在上）。
+    *   确保文字不会遮挡图像的核心视觉主体。
+
+2.  **No Transform for Positioning (绝对禁止)**：
+    *   **禁止**在 `style` 中使用 CSS `transform` 属性来进行居中或位移（例如：`translate(-50%, -50%)`），因为这会破坏前端的拖拽和缩放逻辑。
+    *   **水平居中方案**：若需水平居中，请设置 `"left": "0"`, `"width": "100%"`, `"textAlign": "center"`。
+    *   **垂直定位**：必须使用具体的 `top` 或 `bottom` 数值（px 或 %）。
+
+3.  **装饰元素 (SVG & Emoji)**：
+    *   根据 `tone` 添加装饰，类型可以是 **SVG** 或 **Emoji**。
+    *   **Emoji 装饰**：
+        *   设置 `type: "text"`。
+        *   `content`: 输入具体的 Emoji 字符（如 "✨", "🔥", "🌿", "✅"）。
+        *   `style`: 必须包含较大的 `fontSize` (通常 50px-150px) 以起到装饰作用。
+    *   **SVG 装饰**：
+        *   设置 `type: "svg"`。
+        *   `content`: 必须是**完整**的、包含 `xmlns="http://www.w3.org/2000/svg"` 属性的 `<svg>...</svg>` 标签字符串。禁止输出裸路径或简写。
+        *   `style`: 必须指定具体的 `width` 和 `height`。
 
 # Output Format (JSON Only)
+请仅输出纯 JSON 格式，格式如下：
 ```json
 {
   "canvas": {
@@ -100,6 +116,19 @@
         "fontWeight": "bold",
         "boxShadow": "0 4px 12px rgba(0,0,0,0.3)"
       }
+    },
+    {
+      "id": "uuid2",
+      "type": "svg",
+      "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 60\"><ellipse cx=\"50\" cy=\"30\" rx=\"40\" ry=\"25\" fill=\"#F5E6CA\" opacity=\"0.8\"/></svg>",
+      "style": {
+        "position": "absolute",
+        "top": "20%",
+        "left": "80%",
+        "width": "150px",
+        "height": "auto",
+        "zIndex": 15
+        }
     }
   ]
 }

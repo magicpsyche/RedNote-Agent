@@ -186,7 +186,7 @@ async function generateLayoutConfig(params: {
     copyResult: JSON.stringify(params.copy),
     BackgroundImage: params.backgroundImage,
   });
-  console.info("[USER_PROMPT][排版]", userPrompt);
+  console.info("[USER_PROMPT][prompt3]", userPrompt);
 
   try {
     const { content } = await callChatCompletion({
@@ -195,6 +195,7 @@ async function generateLayoutConfig(params: {
       temperature: 0.65,
       llmConfig: params.llmConfig,
     });
+    console.info("[LLM_RESPONSE][prompt3]", content);
     const layoutParsed = tryParseJson(content);
     const parsed = layoutSchema.safeParse(layoutParsed);
     if (parsed.success) {
@@ -316,8 +317,8 @@ function tryParseJson(content: string | undefined | null): unknown | null {
   let trimmed = content.trim();
   if (!trimmed) return null;
 
-  // 处理 ```json ... ``` 包裹的情况
-  const fenceMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
+  // 处理包含 ```json ... ``` 的情况（即使前后有额外说明也能截取）
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fenceMatch) {
     trimmed = fenceMatch[1].trim();
   }
@@ -325,6 +326,17 @@ function tryParseJson(content: string | undefined | null): unknown | null {
   try {
     return JSON.parse(trimmed);
   } catch {
+    // 回退：尝试截取首尾大括号之间的内容，容错设计说明等额外文本
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      const slice = trimmed.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(slice);
+      } catch {
+        return null;
+      }
+    }
     return null;
   }
 }
