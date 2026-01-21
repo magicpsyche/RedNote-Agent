@@ -16,7 +16,7 @@
 ## Project Structure & Module Organization
 - `src/app/`: App Router entrypoint; keeps `page.tsx`, server actions, and route handlers. Keep the SPA flow under `/`.
 - `src/components/`: Reusable UI (shadcn/ui wrappers, canvas/editor widgets, form inputs). Name components with `PascalCase`.
-- `src/store/`: Zustand store slices; holds `AppStatus`, `copyResult`, `visualStrategy`, and `layoutConfig`.
+- `src/store/`: Zustand store slices; holds `AppStatus`, `copyResult`, and `layoutConfig`.
 - `src/types/schema.ts`: Source of truth for `ProductInput`, `CopyResult`, `VisualStrategy`, `LayoutConfig`, and `AppStatus` (see `schema.md`).
 - `src/lib/`: Utilities (LLM clients, html-to-image helpers, fetch wrappers).
 - `public/`: Static assets and fonts; keep large demo images out of the repo.

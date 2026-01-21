@@ -23,6 +23,7 @@ export interface CopyResult {
   content: string;
   tags: string[];
   selling_keywords: string[];
+  seedream_prompt_cn: string;
 }
 
 export interface VisualStrategy {
@@ -98,7 +99,6 @@ export interface ShapeLayer extends BaseLayer {
 export type AppStatus =
   | "IDLE"
   | "GENERATING_COPY"
-  | "GENERATING_STRATEGY"
   | "GENERATING_IMAGE"
   | "GENERATING_LAYOUT"
   | "COMPLETED"

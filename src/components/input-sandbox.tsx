@@ -9,7 +9,6 @@ import {
   generateCopyAction,
   generateLayoutConfigAction,
   generateSeedreamImageAction,
-  generateVisualStrategyAction,
 } from "@/app/actions/generate";
 import { useAppStore } from "@/store/use-app-store";
 import type { ProductInput } from "@/types/schema";
@@ -41,7 +40,6 @@ export function InputSandbox() {
     setStatus,
     setInput,
     setCopyResult,
-    setVisualStrategy,
     setLayoutConfig,
     setBackgroundImagePreview,
     setError,
@@ -69,20 +67,16 @@ export function InputSandbox() {
       setError(null);
       setInput(payload);
       setCopyResult(null);
-      setVisualStrategy(null);
       setLayoutConfig(null);
       setBackgroundImagePreview(null);
       setStatus("GENERATING_COPY");
       try {
         const copy = await generateCopyAction(payload);
         setCopyResult(copy);
-        setStatus("GENERATING_STRATEGY");
 
-        const visual = await generateVisualStrategyAction(copy);
-        setVisualStrategy(visual);
         setStatus("GENERATING_IMAGE");
 
-        const bgUrl = await generateSeedreamImageAction(visual.seedream_prompt_cn);
+        const bgUrl = await generateSeedreamImageAction(copy.seedream_prompt_cn);
         const safeBgUrl = toProxyImageUrl(bgUrl);
         setStatus("GENERATING_IMAGE"); // 生图完成后再确认一次状态
 
@@ -90,18 +84,18 @@ export function InputSandbox() {
         setBackgroundImagePreview(safeBgUrl);
         setLayoutConfig((prev) => ({
           canvas: {
-            width: visual.design_plan.canvas.width,
-            height: visual.design_plan.canvas.height,
+            width: prev?.canvas.width ?? 1080,
+            height: prev?.canvas.height ?? 1440,
             backgroundImage: safeBgUrl,
-            tone: visual.design_plan.tone,
-            overlayOpacity: visual.design_plan.canvas.overlayOpacity ?? 0.05,
+            tone: copy.tone,
+            overlayOpacity: prev?.canvas.overlayOpacity ?? 0.05,
           },
           layers: prev?.layers ?? [],
         }));
 
         // 切换到排版阶段，避免状态栏停留在“生图”
         setStatus("GENERATING_LAYOUT");
-        const layout = await generateLayoutConfigAction({ copy, visual, backgroundImage: safeBgUrl });
+        const layout = await generateLayoutConfigAction({ copy, backgroundImage: safeBgUrl });
         setLayoutConfig({
           ...layout,
           canvas: {
@@ -134,7 +128,6 @@ export function InputSandbox() {
       setInput,
       setLayoutConfig,
       setStatus,
-      setVisualStrategy,
     ]
   );
 

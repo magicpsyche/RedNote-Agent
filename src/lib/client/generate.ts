@@ -1,8 +1,7 @@
-import type { CopyResult, LayoutConfig, ProductInput, VisualStrategy } from "@/types/schema";
+import type { CopyResult, LayoutConfig, ProductInput } from "@/types/schema";
 
 export type GenerateResponse = {
   copy: CopyResult;
-  visual: VisualStrategy;
   layout: LayoutConfig;
 };
 

@@ -15,7 +15,6 @@ const PLACEHOLDER_COPY = "https://placehold.co/2304x3072/png?text=Awaiting%20cop
 const glowColors: Record<AppStatus, string> = {
   IDLE: "#2dd4bf",
   GENERATING_COPY: "#f59e0b",
-  GENERATING_STRATEGY: "#6366f1",
   GENERATING_IMAGE: "#e879f9",
   GENERATING_LAYOUT: "#22d3ee",
   COMPLETED: "#10b981",
@@ -23,7 +22,6 @@ const glowColors: Record<AppStatus, string> = {
 };
 const generatingStatuses: AppStatus[] = [
   "GENERATING_COPY",
-  "GENERATING_STRATEGY",
   "GENERATING_IMAGE",
   "GENERATING_LAYOUT",
 ];
@@ -214,6 +212,7 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
       content: copyResult?.content ?? contentDraft ?? "",
       tags: copyResult?.tags ?? tagDrafts ?? [],
       selling_keywords: copyResult?.selling_keywords ?? [],
+      seedream_prompt_cn: copyResult?.seedream_prompt_cn ?? "",
     };
     setCopyResult({ ...base, ...partial });
   };
@@ -392,7 +391,6 @@ function CopyPanel({ copyPresent, tags }: { copyPresent: boolean; tags: string[]
 function CanvasPreview() {
   const {
     layoutConfig,
-    visualStrategy,
     backgroundImagePreview,
     setLayoutConfig,
     copyResult,

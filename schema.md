@@ -26,7 +26,7 @@ export interface ProductInput {
 ```typescript
 /**
  * Prompt 1 (文案专家) 的输出结果
- * 作用: 用于前端文案预览，并作为 Prompt 2 的输入
+ * 作用: 用于前端文案预览，并直接提供 Seedream 中文提示词
  */
 export interface CopyResult {
   product_id: string;
@@ -36,11 +36,14 @@ export interface CopyResult {
   tags: string[];     // 话题标签，如 "#好物推荐"
   
   // 关键字段：用于视觉设计的短语（如 "舒缓颈椎", "云朵触感"）
-  selling_keywords: string[]; 
+  selling_keywords: string[];
+
+  // 直接调用 Seedream 的中文提示词，包含留白/负向约束
+  seedream_prompt_cn: string;
 }
 ```
 
-### Phase 3: 视觉策略 (Visual Strategy Output)
+### Phase 3: 视觉策略 (Visual Strategy Output - 当前暂停使用)
 ```typescript
 /**
  * Prompt 2 (视觉导演) 的输出结果
@@ -139,7 +142,6 @@ export interface ShapeLayer extends BaseLayer {
 export type AppStatus = 
   | 'IDLE'                // 初始状态，等待输入
   | 'GENERATING_COPY'     // 正在调用 Prompt 1 (文案)
-  | 'GENERATING_STRATEGY' // 正在调用 Prompt 2 (视觉策略)
   | 'GENERATING_IMAGE'    // 正在调用 Seedream API (生图)
   | 'GENERATING_LAYOUT'   // 正在调用 Prompt 3 (视觉模型排版)
   | 'COMPLETED'           // 全部完成，允许拖拽编辑

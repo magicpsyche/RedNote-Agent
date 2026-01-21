@@ -17,30 +17,26 @@ Preview：
 
 ## 1. 项目概述
 - 定位：面向小红书内容运营及电商的“文案 + 视觉 + 生图 + 排版一体化” Agent。
-- 形态：Next.js App Router 前后端一体；前端提供输入、状态提示、画布编辑与导出；后端 Server Actions 串联文案生成、视觉策略生成、Seedream 生图、排版生成。
+- 形态：Next.js App Router 前后端一体；前端提供输入、状态提示、画布编辑与导出；后端 Server Actions 串联文案生成、Seedream 生图、排版生成（视觉策略阶段暂缓）。
 - 当前默认模型：`bytedance/doubao-1.8`；生图端默认 `bytedance/doubao-seedream-4.5`。
 
 ## 2. 架构设计
 - 总体架构：Next.js App Router + Server Actions + Zustand 全局状态 + 前端可视化组件 + 轻量工具库。
 - 数据流：
   1) 输入校验：`productInputSchema` 校验必填字段与 tone 枚举。
-  2) 文案生成：`generateCopyAction` 调用 LLM 返回 `CopyResult`。
-  3) 视觉策略：`generateVisualStrategyAction` 依据文案生成 Seedream 中文提示词 + 设计计划。
-  4) 生图：`generateSeedreamImageAction` 调 Seedream 2304×3072，返回 URL；通过 `toProxyImageUrl` 包装本地代理避免 CORS。
-  5) 排版：`generateLayoutConfigAction` 依据文案、设计计划及背景图生成 `LayoutConfig`。
-  6) 前端编辑：`Workspace` 组件渲染画布，文本图层可拖拽、编辑及调整 zIndex；`html-to-image` 导出 1080×1440。
-- 状态管理：`useAppStore` 持有 `AppStatus`、输入、文案、视觉、布局、临时背景预览、错误信息。
+  2) 文案生成：`generateCopyAction` 调用 LLM 返回 `CopyResult`，直接携带 `seedream_prompt_cn`。
+  3) 生图：`generateSeedreamImageAction` 使用文案内的 `seedream_prompt_cn` 调 Seedream 2304×3072，返回 URL；通过 `toProxyImageUrl` 包装本地代理避免 CORS。
+  4) 排版：`generateLayoutConfigAction` 依据文案与背景图生成 `LayoutConfig`。
+  5) 前端编辑：`Workspace` 组件渲染画布，文本图层可拖拽、编辑及调整 zIndex；`html-to-image` 导出 1080×1440。
+- 状态管理：`useAppStore` 持有 `AppStatus`、输入、文案、布局、临时背景预览、错误信息。
 - 画布缩放与导出：逻辑尺寸保持 1080×1440，展示时按容器等比缩放；导出前强制恢复逻辑尺寸、等待字体加载、内联背景。
 - CORS与安全：新增 `/api/proxy-image` 代理远程图片；前端统一通过 `toProxyImageUrl` 包装，避免导出时 canvas 污染。
 
 ## 3. Prompt 策略
-- Prompt 结构：三段模板，存于 `prompt1.md`、`prompt2.md`、`prompt3.md`。
+- Prompt 结构：三段模板，`prompt2.md` 暂停使用，当前链路为 `prompt1.md -> Seedream -> prompt3.md`。
 - 文案：要求输出结构化 JSON，强调口吻匹配与卖点突出。
-- 视觉：
-  - Seedream 中文提示词，必须包含留白描述；负向约束显式排除文字、水印及低质量元素。
-  - 设计计划：包含色板、字体、布局元素与装饰。
-  - 留白强制：根据文字在画面中的位置，提示语中必须出现对应留白描述。
-- 排版：输入设计计划、背景图 URL 及文案，输出包含 canvas 元数据和 `layers` 数组的 JSON；图层支持位置允许绝对数值或百分比。
+- 视觉提示：Seedream 中文提示词直接由 prompt1 生成，必须包含留白描述及负向约束（文字/水印/低质量等）。
+- 排版：输入文案（含 tone/selling_keywords）与背景图 URL，输出包含 canvas 元数据和 `layers` 数组的 JSON；图层支持位置允许绝对数值或百分比。
 
 ## 4. 关键模块与实现细节
 - `src/app/actions/generate.ts`：LLM & Seedream 调用、超时控制、代理包装、prompt 装载、JSON 清洗、schema 校验；支持分步 Action 以便前端流式展示。
@@ -74,10 +70,10 @@ Preview：
 
 ## 7. Bad Cases 与解决
 - 背景图跨域导致导出失败：增加本地图片代理与导出前内联背景，消除 CORS 污染。
-- LLM 返回半结构化或混入 Markdown：添加 `tryParseJson` 及 fenced 处理，视觉策略再经 `transformVisualResponse` 和 zod 校验兜底。
+- LLM 返回半结构化或混入 Markdown：添加 `tryParseJson` 及 fenced 处理，布局再经 zod 校验兜底。
 - 文本编辑在缩放画布下易偏移：编辑浮层按 `canvasScale` 逆向缩放，保证鼠标及排版体验一致。
 - Prompt被截断：prompt的值使用反引号包含，但是prompt里还有其他反引号，于是被代码截断，浪费了很多时间。
-- 字体与色板不一致：视觉策略转换时提供默认字体、色板及位置，避免前端渲染异常。
+- 字体与色板不一致：布局解析时提供默认字体、色板及位置，避免前端渲染异常。
 
 ## 8. 模型评价
 - Doubao 1.8 ：优点是 JSON 遵从度高；缺点是排版结构有时遗漏字段、生成速度慢。
@@ -89,4 +85,3 @@ Preview：
 - 未来工作：
   - 工程：扩展到电商海报、详情页领域。
   - 体验：优化UI/UX。
-

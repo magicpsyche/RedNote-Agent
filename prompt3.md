@@ -47,10 +47,13 @@
    - **Effect**: 宽字间距 (letterSpacing: "3px")，强烈的黑白对比，无杂乱装饰。
 
 # Technical Constraints (CRITICAL)
-1. **No Transform for Positioning**: 禁止在 style 中使用 'transform' 来居中（如 translate(-50%)），因为这会破坏前端的拖拽逻辑。
+基于固定画布尺寸 **1080x1440 (3:4)**，为每一个 `selling_keywords` 和装饰元素设计具体的 CSS 样式参数。
+- **布局逻辑**：文字位置必须与生图指令中的“留白区”对应（例如：图的主体在下，字就在上）。
+- **No Transform for Positioning**: 禁止在 style 中使用 'transform' 来居中（如 translate(-50%)），因为这会破坏前端的拖拽逻辑。
    - **居中方案**: 若需水平居中，请设置 "left": "0", "width": "100%", "textAlign": "center"。
-2. **Layer Types**: 仅支持 'text' (文字) 和 'shape' (纯色/渐变背景块)。不支持复杂的 SVG path。
-3. **Contrast**: 必须确保文字在背景上清晰可见。如果不确定，请给文字添加 'textShadow'。
+- **装饰元素**：根据 `tone` 添加 SVG 装饰（如：star, line, blob, circle, quote）。
+- **可读性保障 (Readability Logic)**：
+     - **对比度检查**：文字颜色必须满足 WCAG AA 标准。深色背景(#000-#777)强制使用浅色字(#FFF/米色)；浅色背景强制使用深色字。
 
 # Output Format (JSON Only)
 ```json
@@ -59,8 +62,7 @@
     "width": 1080,
     "height": 1440,
     "backgroundImage": "String (URL)",
-    "tone": "String",
-    "overlayOpacity": 0.1 // 可选：给全图加一层黑/白蒙版
+    "tone": "String"
   },
   "layers": [
     {
@@ -108,5 +110,5 @@
 <<<END_SYSTEM>>>
 <<<USER>>>
 copyResult: {{copyResult}}
-Background Image: {{Background Image}}
+BackgroundImage: {{BackgroundImage}}
 <<<END_USER>>>

@@ -8,7 +8,6 @@ import type { AppStatus } from "@/types/schema";
 const pipeline: { code: AppStatus; label: string }[] = [
   { code: "IDLE", label: "就绪" },
   { code: "GENERATING_COPY", label: "文案" },
-  { code: "GENERATING_STRATEGY", label: "视觉策略" },
   { code: "GENERATING_IMAGE", label: "生图" },
   { code: "GENERATING_LAYOUT", label: "排版" },
   { code: "COMPLETED", label: "完成" },
@@ -17,7 +16,6 @@ const pipeline: { code: AppStatus; label: string }[] = [
 const dotColors: Record<AppStatus, string> = {
   IDLE: "#2dd4bf", // teal
   GENERATING_COPY: "#f59e0b", // amber
-  GENERATING_STRATEGY: "#6366f1", // indigo
   GENERATING_IMAGE: "#e879f9", // fuchsia
   GENERATING_LAYOUT: "#22d3ee", // cyan
   COMPLETED: "#10b981", // emerald

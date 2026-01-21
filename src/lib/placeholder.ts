@@ -32,10 +32,11 @@ export function deriveFromInput(input: ProductInput): {
       `#${input.category}`,
     ],
     selling_keywords: sellingKeywords,
+    seedream_prompt_cn: `柔和晨光卧室，云朵感记忆棉枕头特写，突出慢回弹护颈曲线，顶部留白放文字，右上角小贴纸，ins 风，8K，干净背景，tone: ${input.tone} --no text, watermark, signature, logo, typography, words, cluttered, low quality`,
   };
 
   const visual: VisualStrategy = {
-    seedream_prompt_cn: `柔和晨光卧室，云朵感记忆棉枕头特写，突出慢回弹护颈曲线，顶部留白放文字，右上角小贴纸，ins 风，8K，干净背景，tone: ${input.tone}`,
+    seedream_prompt_cn: copy.seedream_prompt_cn,
     design_plan: {
       canvas: { width: 1080, height: 1440 },
       tone: input.tone,
