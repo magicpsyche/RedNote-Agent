@@ -341,6 +341,14 @@ function tryParseJson(content: string | undefined | null): unknown | null {
   try {
     return JSON.parse(trimmed);
   } catch {
+    const fixedSingleQuote = fixSingleQuotedContent(trimmed);
+    if (fixedSingleQuote !== trimmed) {
+      try {
+        return JSON.parse(fixedSingleQuote);
+      } catch {
+        // continue to other fallbacks
+      }
+    }
     // 回退：尝试截取首尾大括号之间的内容，容错设计说明等额外文本
     const firstBrace = trimmed.indexOf("{");
     const lastBrace = trimmed.lastIndexOf("}");
@@ -362,6 +370,13 @@ function cleanPromptBlock(block: string): string {
   const withoutPrefix = trimmed.replace(/^System_Prompt=`?/i, "").replace(/^User_Prompt=`?/i, "");
   const withoutSuffix = withoutPrefix.replace(/`$/, "").trim();
   return withoutSuffix;
+}
+
+// LLM 偶发用单引号包裹 SVG 字符串，转成合法 JSON
+function fixSingleQuotedContent(source: string): string {
+  return source.replace(/"content"\s*:\s*'([\s\S]*?)'/g, (_match, inner) => {
+    return `"content": ${JSON.stringify(inner)}`;
+  });
 }
 
 function getLLMConfig() {
