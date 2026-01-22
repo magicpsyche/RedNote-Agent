@@ -201,7 +201,7 @@ async function generateLayoutConfig(params: {
     copyResult: JSON.stringify(params.copy),
     BackgroundImage: params.backgroundImage,
   });
-  console.info("[USER_PROMPT][prompt3]", userPrompt);
+//   console.info("[USER_PROMPT][prompt3]", userPrompt);
 
   try {
     const { content } = await callChatCompletion({
@@ -210,7 +210,7 @@ async function generateLayoutConfig(params: {
       temperature: 0.65,
       llmConfig: params.llmConfig,
     });
-    console.info("[LLM_RESPONSE][prompt3]", content);
+    // console.info("[LLM_RESPONSE][prompt3]", content);
     const layoutParsed = tryParseJson(content);
     const parsed = layoutSchema.safeParse(layoutParsed);
     if (parsed.success) {
@@ -258,7 +258,8 @@ async function callChatCompletion({
     { role: "user" as const, content: userPrompt },
   ];
 
-//   console.info("[USER_PROMPT——▲▲▲▲▲]", userPrompt);
+  console.info("[USER_PROMPT——▲▲▲▲▲]", userPrompt);
+  
 
   const result = await generateText({
     model,
@@ -267,6 +268,7 @@ async function callChatCompletion({
   });
 
   const content = result.text;
+  console.info("[LLM_RESPONSE——★★★★]", content);
   if (!content) {
     throw new Error("LLM 返回空内容");
   }
