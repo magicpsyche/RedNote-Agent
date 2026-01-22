@@ -97,9 +97,9 @@
         // React CSS Properties (CamelCase)
         "position": "absolute",
         "top": "15%",
-        "left": "0",
-        "width": "100%", // 配合 textAlign center 实现居中
-        "textAlign": "center", 
+        "left": "0", // 标题必须是0偏移
+        "width": "100%", // 标题必须是100%
+        "textAlign": "center", // 配合 textAlign center 实现居中
         "fontSize": "80px",
         "color": "#ffffff",
         "fontFamily": "ZCOOL QingKe HuangYou",

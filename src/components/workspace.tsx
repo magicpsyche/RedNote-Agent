@@ -1197,12 +1197,25 @@ function TextLayerNode({
   const normalizedStyle = normalizeStyle(layer.style);
   const visualStyle = useMemo(() => {
     const positionalKeys = new Set(["top", "left", "right", "bottom", "position"]);
+    const sizingKeys = new Set([
+      "width",
+      "minWidth",
+      "maxWidth",
+      "height",
+      "minHeight",
+      "maxHeight",
+      "transform",
+      "transformOrigin",
+    ]);
+    const skipKeys = omitPosition
+      ? new Set([...positionalKeys, ...sizingKeys])
+      : positionalKeys;
     return Object.fromEntries(
       Object.entries(normalizedStyle as Record<string, unknown>).filter(
-        ([key]) => !positionalKeys.has(key)
+        ([key]) => !skipKeys.has(key)
       )
     );
-  }, [normalizedStyle]);
+  }, [normalizedStyle, omitPosition]);
   const appliedStyle = omitPosition
     ? { ...visualStyle }
     : ({
