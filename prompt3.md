@@ -14,7 +14,7 @@
 - **Serif**: 'Noto Serif SC' (宋体) - 对应高级/极简
 
 # Style Logic (CRITICAL: Map Tone to CSS)
-根据输入的 Tone，严格应用以下 CSS 规则：
+根据输入的 Tone，严格应用以下 CSS 规则:
 
 1. **温馨治愈 (Warm/Healing)**
    - **Font**: 'ZCOOL KuaiLe' or 'Noto Sans SC' (Rounded).
@@ -50,36 +50,34 @@
 
 基于固定画布尺寸 **1080x1440 (3:4)**，为`title`和每一个 `selling_keywords` 和装饰元素设计具体的 CSS 样式参数。
 
-1.  **布局逻辑**：
-    *   文字位置必须与生图指令中的“留白区”对应（例如：图的主体在下，字就在上）。
+1.  **布局逻辑**:
+    *   文字位置必须在图片的“留白区”。
     *   确保文字不会遮挡图像的核心视觉主体。
-
-2.  **No Transform for Positioning (绝对禁止)**：
-    *   **禁止**在 `style` 中使用 CSS `transform` 属性来进行居中或位移（例如：`translate(-50%, -50%)`），因为这会破坏前端的拖拽和缩放逻辑。
+    *   **禁止**在 `style` 中使用 CSS `transform` 属性来进行居中或位移（例如：`translate(-50%, -50%)`）。
     *   **水平居中方案**：若需水平居中，请设置 `"left": "0"`, `"width": "100%"`, `"textAlign": "center"`。
-    *   **垂直定位**：必须使用具体的 `top` 或 `bottom` 数值（px 或 %）。
-
-3.  **装饰元素 (SVG & Emoji)**：
+    *   **强制不换行**: 确保所有`"type": "text"`都是单行文本，通过设置`"whiteSpace": "nowrap"`实现。
+    
+2.  **装饰元素 (SVG & Emoji)**:
     *   根据 `tone` 添加装饰，类型可以是 **SVG** 或 **Emoji**。
-    *   **Emoji 装饰**：
+    *   **Emoji 装饰**:
         *   设置 `type: "text"`。
         *   `content`: 输入具体的 Emoji 字符（如 "✨", "🔥", "🌿", "✅"）。
         *   `style`: 必须包含较大的 `fontSize` (通常 50px-150px) 以起到装饰作用。
-    *   **SVG 装饰**：
+    *   **SVG 装饰**:
         *   设置 `type: "svg"`。
         *   `content`: 必须是**完整**的、包含 `xmlns="http://www.w3.org/2000/svg"` 属性的 `<svg>...</svg>` 标签字符串。禁止输出裸路径或简写。
         *   `style`: 必须指定具体的 `width` 和 `height`。
 
-4.  **Readability Assurance (可读性保障)**:
-    - **智能对比度**：检测底图在该区域的明暗。深色背景强制用浅色字(#FFF/米色)；浅色背景强制用深色字。
-    - **复杂背景处理**：如果判断底图背景杂乱（Rich/Detailed），**必须**参考`Style Logic`中的**Effect**，在 `style` 中直接添加以下属性以生成“半透明遮罩”：
+3.  **Readability Assurance (可读性保障)**:
+    - **智能对比度**:检测底图在该区域的明暗。深色背景强制用浅色字(#FFF/米色)；浅色背景强制用深色字。
+    - **复杂背景处理**:如果判断底图背景杂乱（Rich/Detailed），**必须**参考`Style Logic`中的**Effect**，在 `style` 中直接添加以下属性以生成“半透明遮罩”:
       - `backgroundColor`: "rgba(0, 0, 0, 0.4)" (深色遮罩) 或 "rgba(255, 255, 255, 0.6)" (浅色遮罩)
       - `backdropFilter`: "blur(4px)"
       - `padding`: "10px 20px" (确保文字不贴边)
       - `borderRadius`: "8px"
 
 # Output Format (JSON Only)
-请仅输出纯 JSON 格式，格式如下：
+请仅输出纯 JSON 格式，格式如下:
 ```json
 {
   "canvas": {
@@ -100,6 +98,7 @@
         "left": "0", // 标题必须是0偏移
         "width": "100%", // 标题必须是100%
         "textAlign": "center", // 配合 textAlign center 实现居中
+        "whiteSpace": "nowrap",
         "fontSize": "80px",
         "color": "#ffffff",
         "fontFamily": "ZCOOL QingKe HuangYou",
@@ -113,11 +112,12 @@
     {
       "id": "uuid",
       "type": "text",
-      "content": "string(selling_keywords)", // 价格/标签
+      "content": "string(selling_keywords)", // 标签
       "style": {
         "position": "absolute",
         "top": "85%",
         "left": "10%",
+        "whiteSpace": "nowrap",
         "backgroundColor": "#FF4D4F", // 胶囊样式
         "color": "#FFF",
         "borderRadius": "50px",
