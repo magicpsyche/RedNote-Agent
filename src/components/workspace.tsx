@@ -425,15 +425,15 @@ function CanvasPreview() {
     [layers]
   );
 
-  const handleTextUpdate = (id: string, content: string) => {
+  const handleTextUpdate = (id: string, content: string, nextStyle?: CSSProperties) => {
     if (!layoutConfig) return;
     const updated: LayoutConfig = {
       ...layoutConfig,
-      layers: layoutConfig.layers.map((layer) =>
-        layer.id === id && layer.type === "text"
-          ? { ...layer, content }
-          : layer
-      ),
+      layers: layoutConfig.layers.map((layer) => {
+        if (layer.id !== id || layer.type !== "text") return layer;
+        const style = nextStyle ? { ...layer.style, ...nextStyle } : layer.style;
+        return { ...layer, content, style };
+      }),
     };
     setLayoutConfig(updated);
   };
@@ -1185,7 +1185,7 @@ function TextLayerNode({
   canvasScale,
 }: {
   layer: TextLayer;
-  onChange?: (id: string, content: string) => void;
+  onChange?: (id: string, content: string, nextStyle?: CSSProperties) => void;
   readOnly?: boolean;
   onZIndexChange?: (id: string, delta: number) => void;
   omitPosition?: boolean;
@@ -1193,22 +1193,22 @@ function TextLayerNode({
 }) {
   const [isEditing, setEditing] = useState(false);
   const [draft, setDraft] = useState(layer.content);
+  const parseFontSize = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const numeric = parseFloat(value);
+      if (Number.isFinite(numeric)) return numeric;
+    }
+    return 42;
+  };
+  const [fontSize, setFontSize] = useState(parseFontSize(layer.style.fontSize));
 
   const normalizedStyle = normalizeStyle(layer.style);
   const visualStyle = useMemo(() => {
     const positionalKeys = new Set(["top", "left", "right", "bottom", "position"]);
-    const sizingKeys = new Set([
-      "width",
-      "minWidth",
-      "maxWidth",
-      "height",
-      "minHeight",
-      "maxHeight",
-      "transform",
-      "transformOrigin",
-    ]);
+    const transformKeys = new Set(["transform", "transformOrigin"]);
     const skipKeys = omitPosition
-      ? new Set([...positionalKeys, ...sizingKeys])
+      ? new Set([...positionalKeys, ...transformKeys])
       : positionalKeys;
     return Object.fromEntries(
       Object.entries(normalizedStyle as Record<string, unknown>).filter(
@@ -1273,12 +1273,43 @@ function TextLayerNode({
             onChange={(e) => setDraft(e.target.value)}
             style={textareaStyle}
           />
+          <div className="flex items-center justify-between text-xs text-slate-200">
+            <span className="opacity-80">字号</span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 rounded-md border border-border/60 bg-slate-800 px-2 py-1">
+                <button
+                  type="button"
+                  className="rounded bg-slate-700 px-2 py-[3px] text-[11px] font-semibold hover:bg-slate-600"
+                  onClick={() => setFontSize((size) => Math.max(10, Math.round(size) - 2))}
+                >
+                  –
+                </button>
+                <input
+                  type="number"
+                  className="h-8 w-16 rounded border border-border/60 bg-slate-900 px-2 text-right text-sm outline-none"
+                  value={Math.round(fontSize)}
+                  min={8}
+                  max={240}
+                  onChange={(e) => setFontSize(parseFloat(e.target.value) || fontSize)}
+                />
+                <span className="text-[11px] font-semibold text-slate-300">px</span>
+                <button
+                  type="button"
+                  className="rounded bg-slate-700 px-2 py-[3px] text-[11px] font-semibold hover:bg-slate-600"
+                  onClick={() => setFontSize((size) => Math.min(240, Math.round(size) + 2))}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
           <div className="flex text-sm font-medium text-slate-100" style={actionRowStyle}>
             <button
               type="button"
               className="rounded-full bg-primary px-3 py-1 text-primary-foreground shadow"
               onClick={() => {
-                onChange?.(layer.id, draft);
+                const nextStyle = { ...layer.style, fontSize: `${Math.round(fontSize)}px` };
+                onChange?.(layer.id, draft, nextStyle);
                 setEditing(false);
               }}
             >
