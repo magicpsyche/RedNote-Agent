@@ -21,7 +21,7 @@ Preview：
 # RedNote-Agent 技术报告
 
 ## 1. 项目概述
-- 定位：面向小红书内容运营及电商的“文案 + 视觉 + 生图 + 排版一体化” Agent。
+- 定位：面向小红书内容运营及电商的“文案  + 生图 + 排版一体化” Agent。
 - 形态：Next.js App Router 前后端一体；前端提供输入、状态提示、画布编辑与导出；后端 Server Actions 串联文案生成、Seedream 生图、排版生成（视觉策略阶段暂缓）。
 - 当前默认模型：`bytedance/doubao-1.8`；生图端默认 `bytedance/doubao-seedream-4.5`。
 
